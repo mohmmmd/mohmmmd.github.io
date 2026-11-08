@@ -374,7 +374,13 @@ function load(){
     const s = JSON.parse(localStorage.getItem('fpe-v3')||'null');
     if(!s){ // an earlier multi-floor save: keep its floors, add the example doors where the floor is untouched
       const o2 = JSON.parse(localStorage.getItem('fpe-v2')||'null');
-      if(o2 && o2.floors){ try{ const bgs=JSON.parse(localStorage.getItem('fpe-v2-bg')||'[]'); o2.floors.forEach((f,i)=>f.bg=bgs[i]||null); }catch(e){} return o2; }
+      if(o2 && o2.floors){ try{ const bgs=JSON.parse(localStorage.getItem('fpe-v2-bg')||'[]'); o2.floors.forEach((f,i)=>f.bg=bgs[i]||null); }catch(e){}
+        // give saved example floors the doors, windows and open spaces read from the drawings
+        const ex=exampleState().floors;
+        for(const f of o2.floors){ if(f.openings&&f.openings.length) continue; const e=ex.find(x=>x.name===f.name); if(!e){ f.openings=[]; continue; }
+          const idOf=(rid)=>{ const er=e.rooms.find(r=>r.id===rid); if(!er) return null; const k=e.rooms.filter(r=>r.name===er.name).indexOf(er); const m=f.rooms.filter(r=>r.name===er.name)[k]; return m?m.id:null; };
+          f.openings=e.openings.map(o=>o.kind==='gone'?{...o,ra:idOf(o.ra),rb:idOf(o.rb)}:{...o}).filter(o=>o.kind!=='gone'||(o.ra&&o.rb)); }
+        return o2; }
     }
     if(!s){ // carry over a plan saved by the single-floor version as the upper annex
       const o = JSON.parse(localStorage.getItem('fpe-v1')||'null'); if(!o) return null;
