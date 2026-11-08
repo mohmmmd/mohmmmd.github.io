@@ -209,6 +209,7 @@ const TYPES = {
   roof:     {n:'سطح',                 c:'#ececec', minA:0,   minW:0,   long:true, outdoor:true, fixed:true},
   parking:  {n:'موقف سيارات',         c:'#e4e7eb', minA:0,   minW:0,   long:true, outdoor:true},
   yard:     {n:'فناء مكشوف',          c:'#e3eed9', minA:0,   minW:0,   long:true, outdoor:true},
+  tank:     {n:'خزان مياه',           c:'#cfe3f3', minA:0,   minW:0,   long:true, fixed:true},
   void:     {n:'فراغ',                c:'#f5f5f3', minA:0,   minW:0, long:true},
   other:    {n:'أخرى',                c:'#ececf4', minA:0,   minW:0}
 };
@@ -228,17 +229,64 @@ const G = (ra,rb)=>({id:nid('o'),kind:'gone',ra,rb,s:null,e:null});
 const PLOT0 = ()=>({w:14,d:25,sb:{t:2,b:3.35,l:2,r:2},lab:{t:'جار',b:'شارع عرض 15م',l:'جار',r:'جار'}});
 const FL = (name,rooms,columns,useSb,openings)=>({id:nid('f'),name,rooms,columns,openings:openings||[],bg:null,useSetbacks:!!useSb});
 const RN = (rooms,name,i=0)=>rooms.filter(r=>r.name===name)[i].id;
+// Floors traced from the architect's PDF (exact wall faces and columns, 1:100 drawing)
+const GW = (ra,rb,s0,e0)=>Object.assign(G(ra,rb),{s:s0??null,e:e0??null});
+function basementFloor(){ const f=FL('القبو',[
+  R(0.4,2.2,1.6,6.0,'فراغ مفتوح للأعلى','yard',true),
+  R(2.4,2.2,2.4,2.9,'غرفة (غير مسماة)','other'),
+  R(2.4,5.3,2.4,2.9,'غرفة (غير مسماة)','other'),
+  R(5.0,2.2,2.4,1.6,'حمام','bath'),
+  R(5.0,4.0,2.4,1.1,'ممر','corridor'),
+  R(5.0,5.3,2.4,1.1,'ممر','corridor'),
+  R(5.0,6.6,2.4,1.6,'حمام','bath'),
+  R(7.6,2.2,1.6,16.9,'ممر','corridor'),
+  R(9.4,2.2,4.2,3.0,'ترفيهي','living'),
+  R(9.4,5.4,4.2,2.8,'ترفيهي','living'),
+  R(9.4,8.4,4.2,2.8,'ترفيهي','living'),
+  R(0.4,8.4,7.0,5.0,'ترفيهي','living'),
+  R(3.4,13.4,4.0,4.0,'ترفيهي','living'),
+  R(3.4,17.6,1.2,1.5,'حمام','bath'),
+  R(4.8,17.6,1.2,1.5,'فراغ (غير مسمى)','void'),
+  R(6.2,17.6,1.2,1.5,'ممر','corridor'),
+  R(9.4,11.4,2.4,4.5,'درج','stair',true),
+  R(9.4,15.9,2.4,1.2,'بسطة الدرج','stair',true),
+  R(9.4,17.3,2.4,1.8,'مصعد','elevator',true),
+  R(5.0,19.3,2.4,5.5,'درج خارجي','stair',true),
+  R(7.6,19.3,4.0,1.3,'ردهة (غير مسماة)','corridor'),
+  R(7.6,20.8,1.8,2.6,'فراغ (غير مسمى)','void'),
+  R(9.6,20.8,2.0,2.6,'فراغ (غير مسمى)','void'),
+  R(7.6,23.6,1.8,1.2,'حمام','bath'),
+  R(9.6,23.6,2.0,1.2,'حمام','bath'),
+  R(11.8,19.3,1.8,5.5,'مستودع','storage'),
+  R(0.2,15.4,2.0,3.0,'خزان مياه 1','tank',true),
+  R(0.2,18.6,2.0,3.0,'خزان مياه 2','tank',true),
+  R(0.2,21.8,2.0,3.0,'خزان مياه 3','tank',true)
+ ],[C(0.25,0.1,0.5,0.2),C(5.75,0.1,0.5,0.2),C(10.05,0.1,0.5,0.2),C(13.75,0.1,0.5,0.2),C(0.4,2.07,0.5,0.25),C(6.15,2.07,0.7,0.25),C(9.65,2.07,0.7,0.25),C(2.2,2.22,0.4,0.55),C(2.2,4.05,0.4,0.5),C(5.9,5.2,0.7,0.2),C(9.9,5.3,0.7,0.2),C(2.2,6.35,0.4,0.5),C(2.2,8.15,0.4,0.5),C(4.45,8.3,0.7,0.2),C(7.35,8.3,0.5,0.2),C(9.65,8.3,0.9,0.2),C(13.6,11.32,0.5,0.25),C(9.3,11.45,0.2,0.5),C(11.93,11.45,0.25,0.5),C(7.5,11.65,0.2,0.9),C(3.27,13.7,0.25,0.6),C(7.5,14.65,0.2,0.9),C(9.3,15.65,0.2,0.5),C(11.93,15.65,0.25,0.5),C(13.9,15.65,0.2,0.5),C(0.12,16.1,0.25,0.4),C(9.3,17.35,0.2,0.5),C(11.93,17.35,0.25,0.5),C(3.27,17.7,0.25,0.6),C(0.12,19,0.25,0.4),C(3.27,19,0.25,0.6),C(9.3,19.05,0.2,0.5),C(11.93,19.05,0.25,0.5),C(13.6,19.17,0.5,0.25),C(7.65,19.2,0.5,0.2),C(4.87,19.35,0.25,0.5),C(4.87,21.2,0.25,0.7),C(7.5,21.2,0.2,0.7),C(0.12,21.9,0.25,0.4),C(9.5,22.05,0.2,0.5),C(11.7,22.05,0.2,0.5),C(4.87,24.75,0.25,0.5),C(7.5,24.75,0.2,0.5),C(0.12,24.8,0.25,0.4),C(3.3,24.9,0.6,0.2)],true);
+  const r=f.rooms;
+  f.openings=[
+    O(5.39,3.9,'h',0.78,'door',-1,-1), O(5.39,6.5,'h',0.78,'door',1,-1),
+    O(4.9,4.55,'v',1.1,'open'), O(4.9,5.85,'v',1.1,'open'), O(7.5,4.55,'v',1.1,'open'), O(7.5,5.85,'v',1.1,'open'),
+    O(2.2,4.7,'v',0.8,'window'), O(2.2,5.7,'v',0.8,'window'),
+    O(9.3,3.8,'v',1.2,'open'), O(9.3,7.0,'v',1.2,'open'), O(9.3,9.8,'v',1.2,'open'),
+    O(7.5,16.6,'v',1.0,'door',1,1), O(4.7,18.04,'v',0.88,'door',-1,1), O(6.1,18.1,'v',1.0,'open'), O(6.85,19.2,'h',1.1,'open'),
+    O(7.5,19.8,'v',1.0,'door',1,1), O(9.3,16.6,'v',1.0,'open'), O(10.6,17.2,'h',1.2,'slide'),
+    O(8.9,20.7,'h',1.0,'door',1,1), O(10.1,20.7,'h',1.0,'door',1,-1), O(8.96,23.5,'h',0.88,'door',1,1), O(10.04,23.5,'h',0.88,'door',1,-1),
+    GW(RN(r,'ترفيهي',3),RN(r,'ترفيهي',4)), GW(RN(r,'ترفيهي',3),RN(r,'ممر',2),8.4,11.2), GW(RN(r,'ترفيهي',4),RN(r,'ممر',3)),
+    GW(RN(r,'ممر',2),RN(r,'ردهة (غير مسماة)')),
+    O(11.7,19.95,'v',1.2,'open')
+  ];
+  f.level=-1; return f; }
 function groundFloor(){ const f=FL('الدور الأرضي',[
   R(0.2,0.2,13.6,1.8,'فناء خلفي','yard',true),
-  R(0.2,2.2,1.7,6.0,'مفتوح على قبو','void'),
+  R(0.2,2.2,1.8,6.0,'مفتوح على قبو','void'),
   R(2.2,2.2,3.6,4.0,'غرفة نوم','bedroom'),
   R(6.0,2.2,3.8,4.0,'غرفة نوم','bedroom'),
   R(10.0,2.2,3.8,4.0,'غرفة نوم','bedroom'),
   R(2.2,6.4,2.4,1.8,'حمام','bath'),
   R(4.8,6.4,6.4,1.8,'ممر','corridor'),
   R(11.4,6.4,2.4,1.8,'حمام','bath'),
-  R(0.2,8.4,4.0,4.9,'صالة','living'),
-  R(4.2,8.4,3.2,4.9,'مقلط','dining'),
+  R(0.2,8.4,4.0,5.0,'صالة','living'),
+  R(4.2,8.4,3.2,5.0,'مقلط','dining'),
   R(7.6,8.4,6.2,2.8,'مطبخ','kitchen'),
   R(7.6,11.4,1.6,4.3,'مستودع','storage'),
   R(9.4,11.4,2.4,4.5,'درج','stair',true),
@@ -247,30 +295,30 @@ function groundFloor(){ const f=FL('الدور الأرضي',[
   R(12.0,11.4,1.8,3.0,'كوي','laundry'),
   R(12.0,14.6,1.8,4.5,'غسيل','laundry'),
   R(3.4,13.6,4.0,3.8,'مجلس','majlis'),
-  R(0.2,13.5,3.0,5.7,'فناء جانبي','yard'),
-  R(3.4,17.7,1.25,1.4,'مدخل','corridor'),
-  R(4.85,17.7,2.55,1.4,'حمام','bath'),
+  R(0.2,13.4,3.0,5.9,'فناء جانبي','yard'),
+  R(3.4,17.6,1.2,1.5,'مدخل','corridor'),
+  R(4.8,17.6,2.6,1.5,'حمام','bath'),
   R(7.6,15.9,1.6,3.2,'ردهة (غير مسماة)','corridor'),
-  R(0.2,19.4,4.6,5.4,'موقف سيارات','parking'),
-  R(4.95,19.4,2.4,5.4,'درج نزول للقبو','stair',true),
-  R(7.6,19.4,6.2,5.4,'موقف سيارات','parking')
- ],[C(0.27,0.09,0.45,0.2),C(5.74,0.09,0.45,0.2),C(10.05,0.09,0.45,0.2),C(13.73,0.09,0.45,0.2),C(0.4,2.09,0.45,0.2),C(6.14,2.09,0.65,0.2),C(9.65,2.09,0.65,0.2),C(2.1,2.24,0.2,0.45),C(13.88,2.28,0.2,0.65),C(2.1,4.03,0.2,0.45),C(0.11,5.19,0.2,0.65),C(5.88,5.19,0.2,0.65),C(9.9,5.29,0.2,0.65),C(13.88,6.28,0.2,0.65),C(2.1,6.32,0.2,0.45),C(0.11,8.03,0.2,0.65),C(2.1,8.13,0.2,0.45),C(4.45,8.28,0.65,0.2),C(7.35,8.28,0.45,0.2),C(9.65,8.28,0.85,0.2),C(13.88,9.08,0.2,0.65),C(0.11,10.65,0.2,0.65),C(13.59,11.27,0.45,0.2),C(9.3,11.41,0.2,0.45),C(11.9,11.41,0.2,0.45),C(7.49,11.61,0.2,0.85),C(0.11,13.29,0.2,0.65),C(3.3,13.69,0.2,0.55),C(7.49,14.64,0.2,0.85),C(9.3,15.64,0.2,0.45),C(11.9,15.64,0.2,0.45),C(13.88,15.64,0.2,0.45),C(0.11,16.08,0.2,0.35),C(9.3,17.33,0.2,0.45),C(11.9,17.33,0.2,0.45),C(3.3,17.69,0.2,0.55),C(0.11,18.99,0.2,0.35),C(3.3,18.99,0.2,0.55),C(9.3,19.04,0.2,0.45),C(11.9,19.04,0.2,0.45),C(7.64,19.19,0.45,0.2),C(13.59,19.19,0.45,0.2),C(4.9,19.33,0.2,0.45),C(4.9,21.19,0.2,0.65),C(7.49,21.19,0.2,0.65),C(0.11,21.87,0.2,0.35),C(13.88,22.03,0.2,0.35),C(4.9,24.72,0.2,0.45),C(7.49,24.72,0.2,0.45),C(0.11,24.77,0.2,0.35),C(13.88,24.77,0.2,0.35),C(3.3,24.87,0.55,0.2)],true);
+  R(0.2,19.3,4.6,5.5,'موقف سيارات','parking'),
+  R(5.0,19.3,2.4,5.5,'درج نزول للقبو','stair',true),
+  R(7.6,19.3,6.2,5.5,'موقف سيارات','parking')
+ ],[C(0.25,0.1,0.5,0.2),C(5.75,0.1,0.5,0.2),C(10.05,0.1,0.5,0.2),C(13.75,0.1,0.5,0.2),C(0.4,2.1,0.5,0.2),C(6.15,2.1,0.7,0.2),C(9.65,2.1,0.7,0.2),C(2.1,2.25,0.2,0.5),C(13.9,2.3,0.2,0.7),C(2.1,4.05,0.2,0.5),C(0.1,5.2,0.2,0.7),C(5.9,5.2,0.2,0.7),C(9.9,5.3,0.2,0.7),C(13.9,6.3,0.2,0.7),C(2.1,6.35,0.2,0.5),C(0.1,8.05,0.2,0.7),C(2.1,8.15,0.2,0.5),C(4.45,8.3,0.7,0.2),C(7.35,8.3,0.5,0.2),C(9.65,8.3,0.9,0.2),C(13.9,9.1,0.2,0.7),C(0.1,10.67,0.2,0.7),C(13.6,11.3,0.5,0.2),C(9.3,11.45,0.2,0.5),C(11.9,11.45,0.2,0.5),C(7.5,11.65,0.2,0.9),C(0.1,13.3,0.2,0.7),C(3.3,13.7,0.2,0.6),C(7.5,14.65,0.2,0.9),C(9.3,15.65,0.2,0.5),C(11.9,15.65,0.2,0.5),C(13.9,15.65,0.2,0.5),C(0.1,16.1,0.2,0.4),C(9.3,17.35,0.2,0.5),C(11.9,17.35,0.2,0.5),C(3.3,17.7,0.2,0.6),C(0.1,19,0.2,0.4),C(3.3,19,0.2,0.6),C(9.3,19.05,0.2,0.5),C(11.9,19.05,0.2,0.5),C(7.65,19.2,0.5,0.2),C(13.6,19.2,0.5,0.2),C(4.9,19.35,0.2,0.5),C(4.9,21.2,0.2,0.7),C(7.5,21.2,0.2,0.7),C(0.1,21.9,0.2,0.4),C(13.9,22.05,0.2,0.4),C(4.9,24.75,0.2,0.5),C(7.5,24.75,0.2,0.5),C(0.1,24.8,0.2,0.4),C(13.9,24.8,0.2,0.4),C(3.3,24.9,0.6,0.2)],true);
   const r=f.rooms;
   f.openings=[
-    O(5.3,6.3,'h',0.9,'door',-1,1), O(6.55,6.3,'h',0.9,'door',-1,-1), O(10.6,6.3,'h',0.9,'door',-1,-1),
-    O(4.7,7.3,'v',0.8,'door',-1,-1), O(11.3,7.3,'v',0.8,'door',1,-1),
-    O(5.4,8.3,'h',1.2,'open'), O(8.6,8.3,'h',0.9,'door',1,-1),
-    O(7.5,12.55,'v',0.8,'door',1,-1), O(12.9,11.3,'h',0.8,'door',1,1), O(12.9,14.5,'h',0.8,'door',1,1),
-    O(9.3,16.5,'v',0.9,'open'), O(10.6,17.2,'h',0.9,'slide'),
-    O(8.4,19.25,'h',0.9,'door',-1,1), O(4.0,19.25,'h',1.0,'door',-1,-1), O(4.0,17.55,'h',1.0,'open'), O(4.75,18.4,'v',0.7,'door',1,1),
-    O(1.7,13.4,'h',2.4,'window'), O(4.4,2.1,'h',1.0,'window'), O(7.3,2.1,'h',1.0,'window'), O(11.6,2.1,'h',1.0,'window'),
-    G(RN(r,'صالة'),RN(r,'مقلط'))
+    O(5.3,6.3,'h',1.0,'door',-1,1), O(6.8,6.3,'h',1.0,'door',-1,-1), O(10.6,6.3,'h',1.0,'door',-1,-1),
+    O(4.7,6.95,'v',0.9,'door',-1,-1), O(11.3,6.9,'v',0.9,'door',1,-1),
+    O(5.4,8.3,'h',1.2,'open'), O(7.5,10.6,'v',1.2,'open'),
+    O(8.1,11.3,'h',1.0,'door',1,1), O(12.5,11.3,'h',1.0,'door',1,1), O(12.5,14.5,'h',1.0,'door',1,1),
+    O(9.3,16.5,'v',1.2,'open'), O(10.6,17.2,'h',1.2,'slide'),
+    O(8.4,19.2,'h',1.0,'door',-1,1), O(4.0,19.2,'h',1.0,'door',-1,-1), O(4.0,17.5,'h',1.2,'open'), O(4.7,18.1,'v',1.0,'door',1,1),
+    O(3.3,15.7,'v',3.4,'window'), O(1.7,13.4,'h',2.8,'window'),
+    O(4.55,2.1,'h',0.9,'window'), O(7.25,2.1,'h',0.9,'window'), O(11.25,2.1,'h',0.9,'window'),
+    GW(RN(r,'صالة'),RN(r,'مقلط'))
   ];
-  return f; }
-
+  f.level=0; return f; }
 function firstFloor(){ const f=FL('الدور الأول',[
-  R(0.2,8.4,1.8,4.9,'سطح الدور الأرضي','roof',true),
-  R(12.05,2.2,1.75,16.9,'سطح الدور الأرضي','roof',true),
+  R(0.2,8.4,1.8,5.0,'سطح الدور الأرضي','roof',true),
+  R(12.0,2.2,1.8,17.1,'سطح الدور الأرضي','roof',true),
   R(2.2,2.2,3.6,4.0,'غرفة نوم','bedroom'),
   R(6.0,2.2,5.8,4.0,'غرفة نوم','bedroom'),
   R(2.2,6.4,2.4,1.8,'حمام','bath'),
@@ -289,43 +337,73 @@ function firstFloor(){ const f=FL('الدور الأول',[
   R(9.4,17.3,2.4,1.8,'مصعد','elevator',true),
   R(9.4,19.3,2.4,1.8,'بلكونة','balcony',true),
   R(2.2,15.1,7.0,6.0,'مجلس','majlis')
- ],[C(6.14,2.1,0.65,0.2),C(9.65,2.1,0.65,0.2),C(11.74,2.1,0.45,0.2),C(2.1,2.24,0.2,0.45),C(2.1,4.03,0.2,0.45),C(5.88,5.19,0.2,0.65),C(11.9,6.05,0.2,0.65),C(2.1,6.33,0.2,0.45),C(2.1,8.15,0.2,0.45),C(4.45,8.29,0.65,0.2),C(9.5,8.29,0.2,0.65),C(11.9,9.09,0.2,0.65),C(2.1,10.67,0.2,0.65),C(9.3,11.43,0.2,0.45),C(11.9,11.43,0.2,0.45),C(7.51,11.63,0.2,0.85),C(2.1,12.65,0.2,0.65),C(7.51,14.64,0.2,0.85),C(9.3,15.64,0.2,0.45),C(11.9,15.64,0.2,0.45),C(2.1,16.01,0.2,0.65),C(9.3,17.33,0.2,0.45),C(11.9,17.33,0.2,0.45),C(2.1,18.94,0.2,0.65),C(9.3,19.04,0.2,0.45),C(11.9,19.04,0.2,0.45),C(4.88,21.18,0.65,0.2),C(7.51,21.18,0.65,0.2)]);
+ ],[C(6.15,2.1,0.7,0.2),C(9.65,2.1,0.7,0.2),C(11.75,2.1,0.5,0.2),C(2.1,2.25,0.2,0.5),C(2.1,4.05,0.2,0.5),C(5.9,5.2,0.2,0.7),C(11.9,6.05,0.2,0.7),C(2.1,6.35,0.2,0.5),C(2.1,8.15,0.2,0.5),C(4.45,8.3,0.7,0.2),C(9.5,8.3,0.2,0.7),C(11.9,9.1,0.2,0.7),C(2.1,10.67,0.2,0.7),C(9.3,11.45,0.2,0.5),C(11.9,11.45,0.2,0.5),C(7.5,11.65,0.2,0.9),C(2.1,12.65,0.2,0.7),C(7.5,14.65,0.2,0.9),C(9.3,15.65,0.2,0.5),C(11.9,15.65,0.2,0.5),C(2.1,16.02,0.2,0.7),C(9.3,17.35,0.2,0.5),C(11.9,17.35,0.2,0.5),C(2.1,18.95,0.2,0.7),C(9.3,19.05,0.2,0.5),C(11.9,19.05,0.2,0.5),C(4.9,21.2,0.7,0.2),C(7.5,21.2,0.7,0.2)]);
   const r=f.rooms;
   f.openings=[
-    O(5.3,6.3,'h',0.9,'door',-1,1), O(6.45,6.3,'h',0.9,'door',-1,-1), O(9.95,6.3,'h',0.7,'door',1,-1),
-    O(4.7,7.3,'v',0.8,'door',-1,-1), O(7.5,8.5,'v',0.8,'door',1,1), O(7.5,10.4,'v',0.8,'door',1,1), O(9.5,10.0,'v',0.8,'door',1,1),
-    O(5.9,9.0,'v',0.9,'door',-1,-1), O(5.9,13.5,'v',1.0,'open'), O(7.5,12.45,'v',0.7,'door',1,1),
-    O(6.7,15.0,'h',1.4,'open'), O(9.3,16.4,'v',0.9,'door',-1,-1), O(10.6,17.2,'h',0.9,'slide'), O(9.3,20.2,'v',1.4,'slide'),
-    O(4.2,2.1,'h',1.0,'window'), O(11.9,4.0,'v',1.6,'window'), O(2.1,13.55,'v',1.0,'window'), O(2.1,9.9,'v',0.8,'window'), O(3.6,21.2,'h',1.6,'window'),
-    G(RN(r,'ممر',0),RN(r,'ممر',1))
+    O(5.3,6.3,'h',1.0,'door',-1,1), O(6.55,6.3,'h',1.0,'door',-1,-1), O(10.2,6.3,'h',0.9,'door',1,-1),
+    O(4.7,6.95,'v',0.9,'door',-1,-1), O(7.5,8.4,'v',0.9,'door',1,1), O(7.5,9.8,'v',0.9,'door',1,1), O(9.5,9.7,'v',0.9,'door',1,1),
+    O(5.9,8.9,'v',1.0,'door',-1,-1), O(5.9,13.55,'v',1.3,'open'), O(8.09,13.0,'h',0.98,'door',-1,-1), O(8.1,15.0,'h',1.0,'open'),
+    O(6.7,15.0,'h',1.4,'open'), O(9.3,16.5,'v',1.0,'door',-1,-1), O(10.6,17.2,'h',1.2,'slide'), O(9.3,20.2,'v',1.8,'slide'),
+    O(4.55,2.1,'h',0.9,'window'), O(11.9,4.2,'v',2.4,'window'), O(2.1,9.65,'v',0.9,'window'), O(2.1,13.55,'v',1.1,'window'), O(3.1,21.2,'h',0.6,'window'),
+    GW(RN(r,'ممر',0),RN(r,'ممر',1),7.1,8.1)
   ];
-  return f; }
-function annexFloor(){ const f=FL('الملحق العلوي',[
-      R(2,2,10,6.45,'سطح الدور الأول','roof',true),
-      R(7.55,8.45,4.45,3.1,'سطح الدور الأول','roof',true),
-      R(2.15,8.65,3.6,3.6,'غرفة نوم','bedroom'),
-      R(2.15,12.45,3.6,2.7,'مطبخ','kitchen'),
-      R(5.95,8.65,1.4,6.5,'ممر','corridor'),
-      R(7.55,11.75,1.6,1.5,'حمام','bath'),
-      R(7.55,13.45,1.6,1.7,'فراغ (غير مسمى)','void'),
-      R(2.15,15.35,4.6,4.0,'مجلس','majlis'),
-      R(6.75,15.35,2.4,4.0,'مقلط','dining'),
-      R(9.35,11.75,2.4,4.5,'درج','stair',true),
-      R(9.35,16.25,2.4,1.2,'بسطة الدرج','stair',true),
-      R(9.35,17.55,2.4,1.8,'مصعد','elevator',true),
-      R(2.15,19.55,7.0,1.8,'بلكونة','balcony',true)
- ],[C(2.1,8.6,0.2,0.45),C(4.45,8.29,0.65,0.2),C(7.51,8.46,0.2,0.45),C(2.1,10.67,0.2,0.65),C(2.1,12.65,0.2,0.65),C(2.1,16.01,0.2,0.65),C(2.1,18.94,0.2,0.65),C(7.51,11.63,0.2,0.85),C(7.51,14.64,0.2,0.85),C(9.3,11.43,0.2,0.45),C(11.9,11.43,0.2,0.45),C(9.3,15.64,0.2,0.45),C(11.9,15.64,0.2,0.45),C(9.3,17.33,0.2,0.45),C(11.9,17.33,0.2,0.45),C(9.3,19.04,0.2,0.45),C(11.9,19.04,0.2,0.45)]);
+  f.level=1; return f; }
+function annexFinalFloor(){ const f=FL('الملحق العلوي (بعد البلدية)',[
+  R(2.2,2.2,3.6,4.0,'غرفة نوم 2','bedroom'),
+  R(6.0,2.2,5.8,4.0,'غرفة نوم رئيسية','master'),
+  R(2.2,6.4,0.8,1.8,'سطح','roof',true),
+  R(3.2,6.4,1.4,1.8,'حمام','bath'),
+  R(4.8,6.4,1.0,1.8,'ممر','corridor'),
+  R(6.0,6.4,1.4,8.5,'ممر','corridor'),
+  R(7.6,6.4,2.6,1.4,'حمام','bath'),
+  R(7.6,8.0,2.6,1.4,'حمام','bath'),
+  R(10.4,6.4,1.4,3.0,'سطح','roof',true),
+  R(7.6,9.6,1.8,1.6,'غسيل','laundry'),
+  R(9.6,9.6,2.2,1.6,'مستودع','storage'),
+  R(2.2,8.4,3.6,3.6,'غرفة نوم 1','bedroom'),
+  R(2.2,12.2,3.6,2.7,'مطبخ','kitchen'),
+  R(7.6,11.4,1.6,1.5,'حمام','bath'),
+  R(7.6,13.1,1.6,1.8,'فراغ (غير مسمى)','void'),
+  R(9.4,11.4,2.4,4.5,'درج','stair',true),
+  R(9.4,15.9,2.4,1.2,'بسطة الدرج','stair',true),
+  R(9.4,17.3,2.4,1.8,'مصعد','elevator',true),
+  R(2.2,15.1,7.0,4.0,'مجلس','majlis'),
+  R(2.2,19.3,7.0,1.8,'سطح','roof',true),
+  R(9.55,19.3,2.25,1.8,'سطح','roof',true)
+ ],[C(6.15,2.1,0.7,0.2),C(9.65,2.1,0.7,0.2),C(11.75,2.1,0.5,0.2),C(2.1,2.25,0.2,0.5),C(2.1,4.05,0.2,0.5),C(5.9,5.2,0.2,0.7),C(11.9,6.05,0.2,0.7),C(2.1,6.15,0.2,0.5),C(9.5,7.9,0.7,0.2),C(4.45,8.3,0.7,0.2),C(2.1,8.45,0.2,0.5),C(11.9,9.65,0.2,0.5),C(2.1,10.67,0.2,0.7),C(9.3,11.45,0.2,0.5),C(11.9,11.45,0.2,0.5),C(7.5,11.65,0.2,0.9),C(2.1,12.65,0.2,0.7),C(7.5,14.65,0.2,0.9),C(9.3,15.64,0.2,0.5),C(11.9,15.64,0.2,0.5),C(2.1,16.02,0.2,0.7),C(9.3,17.34,0.2,0.5),C(11.9,17.34,0.2,0.5),C(2.1,18.94,0.2,0.7),C(9.3,19.04,0.2,0.5),C(11.9,19.04,0.2,0.5)]);
+  f.openings=[
+    O(5.3,6.3,'h',1.0,'door',-1,1), O(6.55,6.3,'h',1.0,'door',-1,-1), O(8.24,6.3,'h',0.88,'door',1,-1),
+    O(4.7,6.9,'v',0.88,'door',-1,-1), O(7.5,8.96,'v',0.88,'door',1,1), O(7.5,10.04,'v',0.88,'door',1,1), O(9.5,9.99,'v',0.78,'door',1,1),
+    O(5.9,9.0,'v',1.0,'door',-1,-1), O(5.9,13.55,'v',1.5,'open'), O(8.04,13.0,'h',0.88,'door',-1,-1), O(8.1,15.0,'h',1.0,'open'),
+    O(6.7,15.0,'h',1.4,'open'), O(9.3,16.5,'v',1.0,'door',-1,-1), O(10.6,17.2,'h',1.2,'slide'), O(5.7,19.2,'h',5.4,'slide')
+  ];
+  const r=f.rooms; f.openings.push(GW(RN(r,'ممر',0),RN(r,'ممر',1),7.1,8.1));
+  f.level=2; return f; }
+function annexFloor(){ const f=FL('الملحق العلوي (الخيار السابق)',[
+  R(2.2,2.2,9.6,6.0,'سطح الدور الأول','roof',true),
+  R(7.6,8.2,4.2,3.0,'سطح الدور الأول','roof',true),
+  R(2.2,8.4,3.6,3.6,'غرفة نوم','bedroom'),
+  R(2.2,12.2,3.6,2.7,'مطبخ','kitchen'),
+  R(6.0,8.4,1.4,6.5,'ممر','corridor'),
+  R(7.6,11.4,1.6,1.5,'حمام','bath'),
+  R(7.6,13.1,1.6,1.8,'فراغ (غير مسمى)','void'),
+  R(2.2,15.1,4.6,4.0,'مجلس','majlis'),
+  R(6.8,15.1,2.4,4.0,'مقلط','dining'),
+  R(9.4,11.4,2.4,4.5,'درج','stair',true),
+  R(9.4,15.9,2.4,1.2,'بسطة الدرج','stair',true),
+  R(9.4,17.3,2.4,1.8,'مصعد','elevator',true),
+  R(2.2,19.3,7.0,1.8,'بلكونة','balcony',true)
+ ],[C(4.45,8.3,0.7,0.2),C(2.1,8.45,0.2,0.5),C(7.5,8.45,0.2,0.5),C(2.1,10.67,0.2,0.7),C(9.3,11.45,0.2,0.5),C(11.9,11.45,0.2,0.5),C(7.5,11.65,0.2,0.9),C(2.1,12.65,0.2,0.7),C(7.5,14.65,0.2,0.9),C(9.3,15.65,0.2,0.5),C(11.9,15.65,0.2,0.5),C(2.1,16.02,0.2,0.7),C(9.3,17.35,0.2,0.5),C(11.9,17.35,0.2,0.5),C(2.1,18.95,0.2,0.7),C(9.3,19.05,0.2,0.5),C(11.9,19.05,0.2,0.5)]);
   const r=f.rooms;
   f.openings=[
-    O(5.85,9.1,'v',0.9,'door',-1,-1), O(6.65,8.55,'h',0.9,'door',1,1), O(7.45,12.85,'v',0.7,'door',1,1),
-    O(5.85,13.6,'v',1.4,'open'), O(6.65,15.25,'h',1.4,'open'), O(7.45,13.85,'v',0.7,'door',1,1),
-    O(9.25,16.6,'v',0.9,'door',-1,-1), O(10.55,17.45,'h',0.9,'slide'), O(5.65,19.45,'h',2.4,'slide'),
-    O(2.05,9.8,'v',1.0,'window'), O(2.8,8.55,'h',0.9,'window'),
-    G(RN(r,'مجلس'),RN(r,'مقلط'))
+    O(5.9,8.95,'v',1.0,'door',-1,-1), O(6.7,8.3,'h',1.0,'door',1,1), O(2.6,8.3,'h',0.8,'window'),
+    O(5.9,13.55,'v',1.5,'open'), O(6.7,15.0,'h',1.4,'open'), O(8.04,13.0,'h',0.88,'door',-1,-1), O(8.1,15.0,'h',1.0,'open'),
+    O(9.3,16.5,'v',1.0,'door',-1,-1), O(10.6,17.2,'h',1.2,'slide'), O(5.7,19.2,'h',5.4,'slide'),
+    GW(RN(r,'مجلس'),RN(r,'مقلط'))
   ];
-  return f; }
+  f.level=2; f.alt=true; return f; }
 function exampleState(){
-  return { plot:PLOT0(), floors:[groundFloor(),firstFloor(),annexFloor()], cur:0, variants:[], settings:{...DEF_SETTINGS}, types:null };
+  return { plot:PLOT0(), floors:[basementFloor(),groundFloor(),firstFloor(),annexFinalFloor(),annexFloor()], cur:1, variants:[], settings:{...DEF_SETTINGS}, types:null };
 }
 // rooms / columns / bg of the current floor are exposed as S.rooms, S.columns, S.bg
 function bindFloors(st){
@@ -340,7 +418,8 @@ function bindFloors(st){
   return st;
 }
 const floor = ()=>S.floors[S.cur];
-const floorBelow = ()=>S.cur>0?S.floors[S.cur-1]:null;
+const lvl = f=>f.level!=null?f.level:S.floors.indexOf(f);
+const floorBelow = ()=>{ const L=lvl(floor()); return S.floors.find(f=>lvl(f)===L-1&&!f.alt) || S.floors.find(f=>lvl(f)===L-1) || null; };
 
 /* ---------------- state, history, persistence ---------------- */
 let S = bindFloors(load() || exampleState());
@@ -365,15 +444,16 @@ function save(){
   try{
     const types={}; for(const k in TYPES) types[k]={minA:TYPES[k].minA,minW:TYPES[k].minW};
     S.types=types;
-    localStorage.setItem('fpe-v3', JSON.stringify({...S,floors:S.floors.map(f=>({...f,bg:null}))}));
-    try{ localStorage.setItem('fpe-v3-bg', JSON.stringify(S.floors.map(f=>f.bg))); }catch(e){}
+    localStorage.setItem('fpe-v4', JSON.stringify({...S,floors:S.floors.map(f=>({...f,bg:null}))}));
+    try{ localStorage.setItem('fpe-v4-bg', JSON.stringify(S.floors.map(f=>f.bg))); }catch(e){}
   }catch(e){}
 }
 function load(){
   try{
-    const s = JSON.parse(localStorage.getItem('fpe-v3')||'null');
-    if(!s){ // an earlier multi-floor save: keep its floors, add the example doors where the floor is untouched
-      const o2 = JSON.parse(localStorage.getItem('fpe-v2')||'null');
+    const s = JSON.parse(localStorage.getItem('fpe-v4')||'null');
+    if(!s){ // plans corrected from the PDF replace older traces; an older save stays restorable from Settings
+      if(localStorage.getItem('fpe-v3')||localStorage.getItem('fpe-v2')||localStorage.getItem('fpe-v1')) { const e=exampleState(); e.notice=true; return e; }
+      const o2 = null;
       if(o2 && o2.floors){ try{ const bgs=JSON.parse(localStorage.getItem('fpe-v2-bg')||'[]'); o2.floors.forEach((f,i)=>f.bg=bgs[i]||null); }catch(e){}
         // give saved example floors the doors, windows and open spaces read from the drawings
         const ex=exampleState().floors;
@@ -388,7 +468,7 @@ function load(){
       try{ e.floors[2].bg=JSON.parse(localStorage.getItem('fpe-v1-bg')||'null'); }catch(x){}
       e.plot=o.plot||e.plot; e.settings={...DEF_SETTINGS,...(o.settings||{})}; e.types=o.types; return e;
     }
-    try{ const bgs=JSON.parse(localStorage.getItem('fpe-v3-bg')||'[]'); s.floors.forEach((f,i)=>f.bg=bgs[i]||null); }catch(e){}
+    try{ const bgs=JSON.parse(localStorage.getItem('fpe-v4-bg')||'[]'); s.floors.forEach((f,i)=>f.bg=bgs[i]||null); }catch(e){}
     return s;
   }catch(e){ return null; }
 }
@@ -985,6 +1065,8 @@ function floorsPanel(){
   return `<h3>الأدوار</h3>
   <div class="row"><select id="flSel" style="flex:1">${S.floors.map((x,i)=>`<option value="${i}" ${i===S.cur?'selected':''}>${i+1}. ${esc(x.name)}</option>`).join('')}</select></div>
   <div class="grid2"><label class="fld" style="grid-column:1/-1"><span>اسم الدور</span><input type="text" id="flName" value="${esc(f.name)}"></label></div>
+  <div class="grid2"><label class="fld"><span>المستوى (0 = الأرضي)</span><input type="number" id="flLv" value="${lvl(f)}" step="1" style="direction:ltr"></label>
+  <label class="chk" style="align-self:end"><input type="checkbox" id="flAlt" ${f.alt?'checked':''}> خيار بديل لنفس المستوى</label></div>
   <label class="chk"><input type="checkbox" id="flSb" ${f.useSetbacks?'checked':''}> هذا الدور يستغل الارتدادات (حد البناء = حد الأرض)</label>
   <label class="chk"><input type="checkbox" id="flGhost" ${S.settings.showGhost?'checked':''}> إظهار الدور الأسفل كمرجع (أزرق متقطع)</label>
   <div class="row">
@@ -993,15 +1075,17 @@ function floorsPanel(){
     <button class="btn sm" id="flDn" ${S.cur===0?'disabled':''}>خفض ↓</button>
     <button class="btn sm dng" id="flDel" ${S.floors.length<2?'disabled':''}>حذف الدور</button>
   </div>
-  <div class="hint">الترتيب من الأسفل للأعلى. كل دور له أعمدته وصورته وبدائله، ويُنبَّه إلى أي عمود لا يرتكز على عمود في الدور الأسفل.</div>`;
+  <div class="hint">كل دور له أعمدته وصورته وبدائله، ويُنبَّه إلى أي عمود لا يرتكز على عمود في الدور الأسفل (${floorBelow()?'«'+esc(floorBelow().name)+'»':'لا يوجد دور أسفل'}).</div>`;
 }
 function bindFloorsPanel(){
   const f=floor();
   $('#flSel').onchange=e=>switchFloor(+e.target.value);
   $('#flName').onchange=e=>{ f.name=e.target.value.trim()||f.name; syncFloorUI(); save(); showProps(); };
   $('#flSb').onchange=e=>{ pushHist(); f.useSetbacks=e.target.checked; afterChange(); };
+  $('#flLv').onchange=e=>{ f.level=parseInt(e.target.value)||0; save(); afterChange(); };
+  $('#flAlt').onchange=e=>{ f.alt=e.target.checked; save(); afterChange(); };
   $('#flGhost').onchange=e=>{ S.settings.showGhost=e.target.checked; save(); render(); };
-  $('#flAdd').onclick=()=>{ const n=FL('دور '+(S.floors.length+1),[],JSON.parse(JSON.stringify(f.columns)).map(c=>({...c,id:nid('c')}))); S.floors.splice(S.cur+1,0,n); hist=[];fut=[]; S.cur++; sel=null; syncFloorUI(); afterChange(); toast('أُضيف دور جديد بنفس أعمدة الدور الأسفل.'); };
+  $('#flAdd').onclick=()=>{ const n=FL('دور '+(S.floors.length+1),[],JSON.parse(JSON.stringify(f.columns)).map(c=>({...c,id:nid('c')}))); n.level=lvl(f)+1; S.floors.splice(S.cur+1,0,n); hist=[];fut=[]; S.cur++; sel=null; syncFloorUI(); afterChange(); toast('أُضيف دور جديد بنفس أعمدة الدور الأسفل.'); };
   const mv=d=>{ const i=S.cur, j=i+d; [S.floors[i],S.floors[j]]=[S.floors[j],S.floors[i]]; S.cur=j; hist=[];fut=[]; syncFloorUI(); afterChange(); };
   $('#flUp').onclick=()=>mv(1); $('#flDn').onclick=()=>mv(-1);
   $('#flDel').onclick=async()=>{ if(!await confirmBox(`حذف «${f.name}» بكل غرفه وأعمدته؟ لا يمكن التراجع عن حذف دور.`,'حذف الدور')) return; S.floors.splice(S.cur,1); S.variants=S.variants.filter(v=>v.floor!==f.id); S.cur=Math.max(0,S.cur-1); hist=[];fut=[]; sel=null; syncFloorUI(); afterChange(); };
@@ -1313,6 +1397,7 @@ function analyze(){
   if(FB){
     for(const c of S.columns){
       const cr=colRect(c);
+      if(c.x<0.35||c.y<0.35||c.x>S.plot.w-0.35||c.y>S.plot.d-0.35) continue; // boundary-wall pillars
       const ok=FB.columns.some(d=>{ const ix=inter(grow(cr,0.005),grow(colRect(d),0.005)); return ix && area(ix)>=0.3*Math.min(area(cr),area(colRect(d))); });
       if(!ok){ const near=FB.columns.reduce((b,d)=>{ const dd=Math.hypot(d.x-c.x,d.y-c.y); return dd<b.d?{d:dd,c:d}:b; },{d:1e9});
         out.push({lvl:'warn',col:c.id,txt:`عمود عند (${f2(c.x)}، ${f2(c.y)}) غير محمول على عمود في «${FB.name}»`+(near.c?`؛ أقرب عمود أسفله على بعد ${f2(near.d)} م عند (${f2(near.c.x)}، ${f2(near.c.y)}). يُراجع مع المهندس الإنشائي أو يُصحَّح موضعه إن كان خطأ رسم.`:'.')}); }
@@ -1528,6 +1613,7 @@ function showSet(){
   ${ck('showBg','إظهار صورة المخطط')}
   <label class="fld"><span>شفافية الصورة</span><input type="range" min="0.05" max="1" step="0.05" data-n="bgOpacity" value="${st.bgOpacity}"></label>
   ${S.bg?'<div class="row"><button class="btn sm dng" id="bgDel">إزالة صورة المخطط</button></div>':''}
+  ${(()=>{ try{ return localStorage.getItem('fpe-v3')?'<h3>نسخة سابقة</h3><div class="hint">نسختك المحفوظة قبل التصحيح من ملف PDF.</div><div class="row"><button class="btn sm" id="bOld">استعادة نسختي السابقة</button></div>':''; }catch(e){ return ''; } })()}
   <h3>الحدود الدنيا الإرشادية</h3>
   <div class="hint">قيم افتراضية للتنبيه فقط، عدّلها وفق اشتراطات جهتك.</div>
   <table class="typetbl"><thead><tr><th>النوع</th><th>أقل مساحة</th><th>أقل بُعد</th></tr></thead><tbody>
@@ -1537,6 +1623,8 @@ function showSet(){
   p.querySelectorAll('[data-n]').forEach(i=>i.oninput=()=>{ st[i.dataset.n]=parseFloat(i.value); save(); render(); updateBadge(); });
   p.querySelectorAll('[data-t]').forEach(i=>i.onchange=()=>{ TYPES[i.dataset.t][i.dataset.f]=parseFloat(i.value)||0; save(); updateBadge(); });
   if($('#bgDel')) $('#bgDel').onclick=()=>{ S.bg=null; save(); render(); showSet(); };
+  if($('#bOld')) $('#bOld').onclick=async()=>{ if(!await confirmBox('استبدال المخططات الحالية بنسختك السابقة؟ يمكنك العودة للمخططات المصححة من زر «المثال».','استعادة')) return;
+    try{ const o=JSON.parse(localStorage.getItem('fpe-v3')); const bgs=JSON.parse(localStorage.getItem('fpe-v3-bg')||'[]'); o.floors.forEach((f,i)=>f.bg=bgs[i]||null); S=bindFloors({...o,settings:{...DEF_SETTINGS,...(o.settings||{})}}); hist=[];fut=[]; sel=null; syncFloorUI(); afterChange(); fit(); toast('تمت استعادة نسختك السابقة.'); }catch(e){ toast('تعذر قراءة النسخة السابقة.'); } };
 }
 
 /* ---------------- files ---------------- */
@@ -1598,6 +1686,7 @@ $('#bEng').onclick=()=>{ S.settings.eng=!S.settings.eng; syncEng(); save(); rend
 window.addEventListener('resize', ()=>render());
 
 fit(); refreshPane(); updateBadge();
+if(S.notice){ delete S.notice; save(); setTimeout(()=>toast('حُدّثت المخططات من ملف PDF بدقة: القبو، الأرضي، الأول، والملحق بخياريه. نسختك السابقة متاحة في «الإعدادات».',6000),400); }
 new ResizeObserver(()=>{ if(!fit.done){ fit(); fit.done=true; } else render(); }).observe(cv);
 </script>
 </body>
