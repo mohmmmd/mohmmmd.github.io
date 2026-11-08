@@ -10,8 +10,14 @@
   --bg:#f4f5f7; --panel:#ffffff; --ink:#1d2330; --muted:#667085; --line:#d9dde4;
   --accent:#0f6e5c; --accent-ink:#ffffff; --accent-soft:#e3f2ee;
   --err:#c62828; --warn:#b26a00; --info:#2563a8;
-  --canvas:#fbfbfa; --grid:#eceae5; --grid2:#dedad2;
+  --canvas:#fbfbfa; --field:#ffffff; --hover:#eef1f4; --soft:#f7f8fa; --shade:rgba(20,24,32,.45);
 }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#14181d; --panel:#1b2027; --ink:#e6e9ee; --muted:#9aa4b2; --line:#2e3540; --accent:#2fa58b; --accent-soft:#1d3a33;
+  --canvas:#232930; --field:#12161b; --hover:#252c35; --soft:#20262e; --shade:rgba(0,0,0,.6); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#14181d; --panel:#1b2027; --ink:#e6e9ee; --muted:#9aa4b2; --line:#2e3540; --accent:#2fa58b; --accent-soft:#1d3a33;
+  --canvas:#232930; --field:#12161b; --hover:#252c35; --soft:#20262e; --shade:rgba(0,0,0,.6); color-scheme:dark }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Tahoma,"Noto Sans Arabic","Geeza Pro",Arial,sans-serif;font-size:14px}
@@ -21,8 +27,8 @@ header{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(-
 header h1{font-size:15px;margin:0 4px 0 10px;font-weight:700}
 .tb{display:flex;gap:4px;align-items:center}
 .sep{width:1px;height:26px;background:var(--line);margin:0 4px;flex:none}
-.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;line-height:1.2;flex:none}
-.btn:hover{background:#f2f4f7}
+.btn{border:1px solid var(--line);background:var(--field);border-radius:8px;padding:6px 10px;cursor:pointer;line-height:1.2;flex:none}
+.btn:hover{background:var(--hover)}
 .btn.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn.dng{color:var(--err)}
@@ -45,13 +51,13 @@ aside{background:var(--panel);border-inline-start:1px solid var(--line);display:
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .fld{display:flex;flex-direction:column;gap:3px}
 .fld span{font-size:12px;color:var(--muted)}
-input[type=text],input[type=number],select{border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:#fff;width:100%;min-width:0}
+input[type=text],input[type=number],select{border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:var(--field);width:100%;min-width:0}
 input[type=number]{direction:ltr;text-align:right}
 h3{font-size:14px;margin:14px 0 6px}
 h3:first-child{margin-top:0}
 .hint{color:var(--muted);font-size:12.5px;line-height:1.6}
 .kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
-.kpi div{background:#f7f8fa;border:1px solid var(--line);border-radius:8px;padding:8px}
+.kpi div{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:8px}
 .kpi b{display:block;font-size:16px;direction:ltr;text-align:right}
 .kpi span{font-size:12px;color:var(--muted)}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -66,21 +72,27 @@ tbody tr{cursor:pointer}
 .iss .fx{margin-top:6px}
 .empty{color:var(--muted);text-align:center;padding:20px 0}
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.card{border:1px solid var(--line);border-radius:10px;padding:6px;cursor:pointer;background:#fff}
+.card{border:1px solid var(--line);border-radius:10px;padding:6px;cursor:pointer;background:var(--panel)}
 .card.on{outline:2px solid var(--accent)}
-.card svg{width:100%;height:auto;display:block;background:var(--canvas);border-radius:6px}
+.card svg{width:100%;height:auto;display:block;background:#fbfbfa;border-radius:6px}
 .card .meta{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
 footer{display:flex;gap:14px;padding:4px 10px;background:var(--panel);border-top:1px solid var(--line);font-size:12px;color:var(--muted);overflow-x:auto;white-space:nowrap}
 footer b{color:var(--ink);direction:ltr;display:inline-block}
-.toast{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:#1d2330;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
+.toast{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
 .toast.show{opacity:.95}
 .zoom{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:4px}
-.zoom .btn{width:34px;height:34px;padding:0;font-size:17px;background:#fffd}
-.legend{position:absolute;bottom:10px;right:10px;background:#fffe;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:11.5px;color:var(--muted);line-height:1.6}
+.zoom .btn{width:34px;height:34px;padding:0;font-size:17px}
+.legend{position:absolute;bottom:10px;right:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:11.5px;color:var(--muted);line-height:1.6}
 .legend i{display:inline-block;width:10px;height:10px;vertical-align:middle;margin-inline-end:4px;border-radius:2px}
 .chk{display:flex;gap:6px;align-items:center;margin:5px 0;cursor:pointer}
 .chk input{width:16px;height:16px}
 .typetbl input{padding:3px 5px}
+#modal{position:fixed;inset:0;background:var(--shade);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+#modal .box{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:16px;width:min(520px,100%);max-height:90vh;overflow:auto;display:flex;flex-direction:column;gap:10px}
+#modal h4{margin:0;font-size:15px;line-height:1.6}
+#modal textarea{width:100%;min-height:160px;direction:ltr;font:12px/1.4 ui-monospace,Consolas,monospace;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--ink);padding:8px}
+#modal img{max-width:100%;border:1px solid var(--line);border-radius:6px;background:#fff}
+#modal .acts{display:flex;gap:8px;flex-wrap:wrap}
 @media (max-width:900px){
   main{grid-template-columns:1fr;grid-template-rows:56vh auto}
   aside{border-inline-start:0;border-top:1px solid var(--line);max-height:none}
@@ -98,6 +110,7 @@ footer b{color:var(--ink);direction:ltr;display:inline-block}
 </head>
 <body>
 <div class="app">
+<div id="modal" hidden><div class="box" role="dialog" aria-modal="true"></div></div>
 <header>
   <h1>محرر المخططات</h1>
   <div class="tb">
@@ -331,6 +344,23 @@ const unionArea = rects => freeRects(rects,[],0).reduce((s,r)=>s+area(r),0);
 /* ---------------- DOM refs ---------------- */
 const $ = s => document.querySelector(s);
 const cv = $('#cv'), world = $('#world');
+function modal(html, onReady){
+  const m=$('#modal'), box=m.querySelector('.box'); box.innerHTML=html; m.hidden=false;
+  onReady(box, ()=>{ m.hidden=true; box.innerHTML=''; });
+}
+function ask(title, def){
+  return new Promise(res=>modal(`<h4>${esc(title)}</h4><input type="text" id="mIn" value="${esc(def)}" style="direction:ltr;text-align:right"><div class="acts"><button class="btn pri" id="mOk">موافق</button><button class="btn" id="mNo">إلغاء</button></div>`,(b,close)=>{
+    const i=b.querySelector('#mIn'); setTimeout(()=>{i.focus();i.select();},30);
+    const ok=()=>{ close(); res(i.value); };
+    b.querySelector('#mOk').onclick=ok; i.onkeydown=e=>{ if(e.key==='Enter') ok(); if(e.key==='Escape'){ close(); res(null);} };
+    b.querySelector('#mNo').onclick=()=>{ close(); res(null); };
+  }));
+}
+function confirmBox(msg, yes='متابعة'){
+  return new Promise(res=>modal(`<h4>${esc(msg)}</h4><div class="acts"><button class="btn pri" id="mOk">${esc(yes)}</button><button class="btn" id="mNo">إلغاء</button></div>`,(b,close)=>{
+    b.querySelector('#mOk').onclick=()=>{ close(); res(true); }; b.querySelector('#mNo').onclick=()=>{ close(); res(false); };
+  }));
+}
 function toast(msg,ms=2600){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove('show'),ms); }
 
 /* ---------------- view ---------------- */
@@ -570,22 +600,23 @@ cv.addEventListener('pointerdown', e=>{
     calibPts.push({x:p.x,y:p.y});
     if(calibPts.length===2){
       const [a,b]=calibPts, cur=Math.hypot(b.x-a.x,b.y-a.y);
-      setTimeout(()=>{
-        const v=parseFloat((prompt('أدخل الطول الحقيقي بين النقطتين (بالمتر):', f2(cur))||'').replace(',','.'));
+      ask('أدخل الطول الحقيقي بين النقطتين (بالمتر):', f2(cur)).then(ans=>{
+        const v=parseFloat((ans||'').replace(',','.'));
         if(S.bg && v>0 && cur>0){ const f=v/cur; S.bg.k*=f; S.bg.x = a.x-(a.x-S.bg.x)*f; S.bg.y = a.y-(a.y-S.bg.y)*f; toast('تمت المعايرة. استخدم «مطابقة نقطة» لضبط موضع الصورة.'); }
         else if(!S.bg) toast('ارفع صورة المخطط أولاً.');
         calibPts=[]; setMode('select'); save(); render();
-      },30);
+      });
     }
     render(); return;
   }
   if(mode==='align'){
     if(!S.bg){ toast('ارفع صورة المخطط أولاً.'); return; }
-    setTimeout(()=>{
-      const v=(prompt('هذه النقطة من الصورة تقابل أي إحداثي في المخطط؟ اكتب س، ص بالمتر\n(0,0 = الزاوية العلوية اليسرى لحد الأرض)', '0,0')||'').split(/[,،\s]+/).map(Number);
+    ask('هذه النقطة من الصورة تقابل أي إحداثي في المخطط؟ اكتب س، ص بالمتر (0,0 = الزاوية العلوية اليسرى لحد الأرض)', '0,0').then(ans=>{
+      if(ans===null){ setMode('select'); return; }
+      const v=ans.trim().split(/[,،\s]+/).map(Number);
       if(v.length>=2 && v.every(n=>!isNaN(n))){ S.bg.x += v[0]-p.x; S.bg.y += v[1]-p.y; save(); render(); toast('تمت مطابقة الصورة.'); }
       setMode('select');
-    },30);
+    });
     return;
   }
   if(mode==='bgmove'){ if(S.bg) drag={t:'bg',p,o:{x:S.bg.x,y:S.bg.y}}; return; }
@@ -660,6 +691,7 @@ document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ if(['calib',
 
 /* ---------------- keyboard ---------------- */
 document.addEventListener('keydown', e=>{
+  if(!$('#modal').hidden) return;
   if(e.target.matches('input,select,textarea')) return;
   const k=e.key.toLowerCase();
   if((e.ctrlKey||e.metaKey)&&k==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
@@ -1064,7 +1096,7 @@ function showVars(){
   </tbody></table></div>`:'<div class="empty">لا توجد بدائل محفوظة بعد.</div>'}`;
   $('#vAdd').onclick=()=>{ S.variants.push({id:nid('v'),name:$('#vName').value.trim()||('بديل '+(V.length+1)),rooms:JSON.parse(JSON.stringify(S.rooms)),at:Date.now()}); save(); showVars(); };
   p.querySelectorAll('[data-ld]').forEach(b=>b.onclick=()=>{ pushHist(); S.rooms=JSON.parse(JSON.stringify(V[+b.dataset.ld].rooms)); sel=null; afterChange(); toast('تم فتح البديل. يمكنك التراجع بـ ↶'); });
-  p.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{ if(confirm('حذف هذا البديل؟')){ V.splice(+b.dataset.dl,1); save(); showVars(); } });
+  p.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{ confirmBox('حذف هذا البديل؟','حذف').then(ok=>{ if(ok){ V.splice(+b.dataset.dl,1); save(); showVars(); } }) });
 }
 
 /* ---------------- settings ---------------- */
@@ -1112,14 +1144,22 @@ $('#fImg').onchange=e=>{
   }; img.src=rd.result; };
   rd.readAsDataURL(f); e.target.value='';
 };
+function exportBox(title, name, data, type, img){
+  modal(`<h4>${esc(title)}</h4>${img?`<img src="${data}" alt="${esc(name)}"><div class="hint">إن لم يبدأ التنزيل: اضغط مطولاً على الصورة أو انقر بالزر الأيمن واحفظها.</div>`:`<textarea id="mTx" readonly></textarea><div class="hint">إن لم يبدأ التنزيل: انسخ النص واحفظه في ملف باسم ${esc(name)}.</div>`}<div class="acts"><button class="btn pri" id="mDl">تنزيل ${esc(name)}</button>${img?'':'<button class="btn" id="mCp">نسخ</button>'}<button class="btn" id="mNo">إغلاق</button></div>`,(b,close)=>{
+    const tx=b.querySelector('#mTx'); if(tx) tx.value=data;
+    b.querySelector('#mDl').onclick=()=>{ try{ download(name,data,type); }catch(e){ toast('التنزيل غير متاح هنا؛ استخدم النسخ.'); } };
+    const cp=b.querySelector('#mCp'); if(cp) cp.onclick=()=>{ navigator.clipboard.writeText(data).then(()=>toast('تم النسخ.'),()=>{ tx.focus(); tx.select(); toast('النص محدد؛ انسخه يدوياً.'); }); };
+    b.querySelector('#mNo').onclick=close;
+  });
+}
 function download(name, data, type){ const a=document.createElement('a'); a.href=typeof data==='string'&&data.startsWith('data:')?data:URL.createObjectURL(new Blob([data],{type})); a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
-$('#bSave').onclick=()=>download('مخطط.json', JSON.stringify(S,null,1), 'application/json');
+$('#bSave').onclick=()=>exportBox('حفظ المخطط (JSON): الغرف والأعمدة والبدائل والصورة','مخطط.json', JSON.stringify(S), 'application/json');
 $('#fJson').onchange=e=>{ const f=e.target.files[0]; if(!f) return; f.text().then(t=>{ try{ const o=JSON.parse(t); if(!o.plot||!o.rooms) throw 0; pushHist(); S={...exampleState(),...o,settings:{...DEF_SETTINGS,...(o.settings||{})},variants:o.variants||[]}; sel=null; afterChange(); fit(); toast('تم فتح الملف.'); }catch(err){ toast('تعذر قراءة الملف: صيغة غير صحيحة.'); } }); e.target.value=''; };
 $('#bCsv').onclick=()=>{
   const m=metrics(S.rooms), rows=[['الفراغ','النوع','العرض م','العمق م','المساحة م²','س','ص']];
   S.rooms.filter(r=>r.type!=='roof').forEach(r=>rows.push([r.name,typeOf(r).n,f2(r.w),f2(r.h),f2(area(r)),f2(r.x),f2(r.y)]));
   rows.push([],['صافي الفراغات المغلقة','','','',f2(m.net)],['المسطح الإجمالي التقديري','','','',f2(m.gross)],['المكشوف','','','',f2(m.opn)]);
-  download('جدول-المساحات.csv','﻿'+rows.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');
+  exportBox('جدول المساحات (CSV)','جدول-المساحات.csv','﻿'+rows.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');
 };
 $('#bPng').onclick=()=>{
   const P=S.plot, m=2.6, k=60, W=Math.round((P.w+2*m)*k), H=Math.round((P.d+2*m)*k);
@@ -1127,12 +1167,12 @@ $('#bPng').onclick=()=>{
   const inner=drawPlan({rooms:S.rooms,interactive:true}); view=sv; sel=ss;
   const defs=cv.querySelector('defs').outerHTML;
   const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" font-family="Tahoma, Arial, sans-serif"><rect width="100%" height="100%" fill="#fff"/>${defs}<g transform="translate(${m*k},${m*k}) scale(${k})">${inner}</g></svg>`;
-  const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); c.width=W; c.height=H; c.getContext('2d').drawImage(img,0,0); download('مخطط.png', c.toDataURL('image/png')); };
+  const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); c.width=W; c.height=H; c.getContext('2d').drawImage(img,0,0); exportBox('صورة المخطط','مخطط.png', c.toDataURL('image/png'),'image/png',true); };
   img.onerror=()=>toast('تعذر التصدير في هذا المتصفح.');
   img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
 };
-$('#bExample').onclick=()=>{ if(!confirm('تحميل المثال سيستبدل الغرف والأعمدة الحالية (يمكن التراجع). متابعة؟')) return; pushHist(); const e=exampleState(); S.plot=e.plot; S.rooms=e.rooms; S.columns=e.columns; sel=null; autoResults=[]; afterChange(); fit(); };
-$('#bNew').onclick=()=>{ if(!confirm('بدء مخطط جديد؟ ستُحذف الغرف والأعمدة (يمكن التراجع).')) return; pushHist(); S.rooms=[]; S.columns=[]; sel=null; autoResults=[]; afterChange(); };
+$('#bExample').onclick=async()=>{ if(!await confirmBox('تحميل المثال سيستبدل الغرف والأعمدة الحالية (يمكن التراجع). متابعة؟')) return; pushHist(); const e=exampleState(); S.plot=e.plot; S.rooms=e.rooms; S.columns=e.columns; sel=null; autoResults=[]; afterChange(); fit(); };
+$('#bNew').onclick=async()=>{ if(!await confirmBox('بدء مخطط جديد؟ ستُحذف الغرف والأعمدة (يمكن التراجع).','بدء جديد')) return; pushHist(); S.rooms=[]; S.columns=[]; sel=null; autoResults=[]; afterChange(); };
 $('#bUndo').onclick=undo; $('#bRedo').onclick=redo;
 $('#zIn').onclick=()=>{ const b=cv.getBoundingClientRect(); zoomAt(1.25,b.width/2,b.height/2); };
 $('#zOut').onclick=()=>{ const b=cv.getBoundingClientRect(); zoomAt(0.8,b.width/2,b.height/2); };
