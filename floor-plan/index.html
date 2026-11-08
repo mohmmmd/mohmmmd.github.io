@@ -1,0 +1,1147 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>محرر المخططات التفاعلي</title>
+<meta name="description" content="أداة لتعديل المخططات المعمارية فوق صورة المخطط مع تثبيت الأعمدة وحساب الأطوال والمساحات تلقائياً.">
+<style>
+:root{
+  --bg:#f4f5f7; --panel:#ffffff; --ink:#1d2330; --muted:#667085; --line:#d9dde4;
+  --accent:#0f6e5c; --accent-ink:#ffffff; --accent-soft:#e3f2ee;
+  --err:#c62828; --warn:#b26a00; --info:#2563a8;
+  --canvas:#fbfbfa; --grid:#eceae5; --grid2:#dedad2;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Tahoma,"Noto Sans Arabic","Geeza Pro",Arial,sans-serif;font-size:14px}
+button,input,select{font:inherit;color:inherit}
+.app{display:grid;grid-template-rows:auto 1fr auto;height:100vh;height:100dvh}
+header{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap}
+header h1{font-size:15px;margin:0 4px 0 10px;font-weight:700}
+.tb{display:flex;gap:4px;align-items:center}
+.sep{width:1px;height:26px;background:var(--line);margin:0 4px;flex:none}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;line-height:1.2;flex:none}
+.btn:hover{background:#f2f4f7}
+.btn.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.dng{color:var(--err)}
+.btn.sm{padding:3px 8px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:default}
+main{display:grid;grid-template-columns:1fr 360px;min-height:0}
+#stage{position:relative;min-width:0;min-height:0;background:var(--canvas)}
+#cv{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none;cursor:default}
+#cv.pan{cursor:grab}
+#cv.draw{cursor:crosshair}
+aside{background:var(--panel);border-inline-start:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.tabs button{flex:1 0 auto;border:0;background:none;padding:9px 8px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted)}
+.tabs button.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+.tabs .badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--err);color:#fff;font-size:11px;margin-inline-start:4px}
+.pane{display:none;padding:12px;overflow:auto;flex:1}
+.pane.on{display:block}
+.row{display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap}
+.row label{min-width:78px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fld{display:flex;flex-direction:column;gap:3px}
+.fld span{font-size:12px;color:var(--muted)}
+input[type=text],input[type=number],select{border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:#fff;width:100%;min-width:0}
+input[type=number]{direction:ltr;text-align:right}
+h3{font-size:14px;margin:14px 0 6px}
+h3:first-child{margin-top:0}
+.hint{color:var(--muted);font-size:12.5px;line-height:1.6}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.kpi div{background:#f7f8fa;border:1px solid var(--line);border-radius:8px;padding:8px}
+.kpi b{display:block;font-size:16px;direction:ltr;text-align:right}
+.kpi span{font-size:12px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:5px 4px;text-align:right}
+th{color:var(--muted);font-weight:600;font-size:12px}
+td.n{direction:ltr;text-align:right;font-variant-numeric:tabular-nums}
+tr.sel td{background:var(--accent-soft)}
+tbody tr{cursor:pointer}
+.iss{border:1px solid var(--line);border-inline-start:4px solid var(--info);border-radius:8px;padding:8px;margin:6px 0;cursor:pointer;line-height:1.55}
+.iss.err{border-inline-start-color:var(--err)}
+.iss.warn{border-inline-start-color:var(--warn)}
+.iss .fx{margin-top:6px}
+.empty{color:var(--muted);text-align:center;padding:20px 0}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.card{border:1px solid var(--line);border-radius:10px;padding:6px;cursor:pointer;background:#fff}
+.card.on{outline:2px solid var(--accent)}
+.card svg{width:100%;height:auto;display:block;background:var(--canvas);border-radius:6px}
+.card .meta{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+footer{display:flex;gap:14px;padding:4px 10px;background:var(--panel);border-top:1px solid var(--line);font-size:12px;color:var(--muted);overflow-x:auto;white-space:nowrap}
+footer b{color:var(--ink);direction:ltr;display:inline-block}
+.toast{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:#1d2330;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
+.toast.show{opacity:.95}
+.zoom{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:4px}
+.zoom .btn{width:34px;height:34px;padding:0;font-size:17px;background:#fffd}
+.legend{position:absolute;bottom:10px;right:10px;background:#fffe;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:11.5px;color:var(--muted);line-height:1.6}
+.legend i{display:inline-block;width:10px;height:10px;vertical-align:middle;margin-inline-end:4px;border-radius:2px}
+.chk{display:flex;gap:6px;align-items:center;margin:5px 0;cursor:pointer}
+.chk input{width:16px;height:16px}
+.typetbl input{padding:3px 5px}
+@media (max-width:900px){
+  main{grid-template-columns:1fr;grid-template-rows:56vh auto}
+  aside{border-inline-start:0;border-top:1px solid var(--line);max-height:none}
+  .app{height:auto;min-height:100vh}
+  #stage{height:56vh}
+  header h1{display:none}
+  .legend{display:none}
+}
+@media print{
+  header,aside,footer,.zoom,.toast{display:none!important}
+  main{display:block}
+  #stage{height:100vh}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>محرر المخططات</h1>
+  <div class="tb">
+    <button class="btn on" data-mode="select" title="تحديد وتحريك وتغيير المقاسات (V)">تحديد</button>
+    <button class="btn" data-mode="room" title="ارسم غرفة بالسحب (R)">+ غرفة</button>
+    <button class="btn" data-mode="column" title="ضع عموداً بالنقر (C)">+ عمود</button>
+    <button class="btn" data-mode="pan" title="تحريك اللوحة (H)">تحريك اللوحة</button>
+    <select id="newType" title="نوع الغرفة الجديدة" style="width:auto"></select>
+  </div>
+  <div class="sep"></div>
+  <div class="tb">
+    <button class="btn" id="bUndo" title="تراجع (Ctrl+Z)">↶</button>
+    <button class="btn" id="bRedo" title="إعادة (Ctrl+Y)">↷</button>
+  </div>
+  <div class="sep"></div>
+  <div class="tb">
+    <label class="btn" title="ارفع صورة المخطط كخلفية للتتبع">رفع صورة المخطط<input type="file" id="fImg" accept="image/*" hidden></label>
+    <button class="btn" data-mode="calib" title="انقر نقطتين معلومتين ثم أدخل الطول الحقيقي">معايرة المقياس</button>
+    <button class="btn" data-mode="align" title="انقر نقطة في الصورة وحدد إحداثياتها">مطابقة نقطة</button>
+    <button class="btn" data-mode="bgmove" title="اسحب الصورة لضبط موضعها">تحريك الصورة</button>
+  </div>
+  <div class="sep"></div>
+  <div class="tb">
+    <button class="btn" id="bSave">حفظ ملف</button>
+    <label class="btn">فتح ملف<input type="file" id="fJson" accept=".json,application/json" hidden></label>
+    <button class="btn" id="bPng">تصدير صورة</button>
+    <button class="btn" id="bCsv">جدول المساحات CSV</button>
+    <button class="btn" id="bExample">المثال</button>
+    <button class="btn dng" id="bNew">مخطط جديد</button>
+  </div>
+</header>
+<main>
+  <div id="stage">
+    <svg id="cv" xmlns="http://www.w3.org/2000/svg"><g id="world"></g></svg>
+    <div class="zoom">
+      <button class="btn" id="zIn" title="تكبير">+</button>
+      <button class="btn" id="zOut" title="تصغير">−</button>
+      <button class="btn" id="zFit" title="ملاءمة" style="font-size:13px">⤢</button>
+    </div>
+    <div class="legend">
+      <div><i style="background:#2b2f36"></i>عمود (مثبّت)</div>
+      <div><i style="background:none;border:1.5px dashed #c62828"></i>تعارض</div>
+      <div><i style="background:none;border:1.5px dashed #0f6e5c"></i>حدود البناء</div>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+  <aside>
+    <div class="tabs">
+      <button data-tab="props" class="on">الخصائص</button>
+      <button data-tab="sched">المساحات</button>
+      <button data-tab="check">التحقق والاقتراحات<span class="badge" id="issBadge" hidden>0</span></button>
+      <button data-tab="auto">ترتيب تلقائي</button>
+      <button data-tab="vars">البدائل</button>
+      <button data-tab="set">الإعدادات</button>
+    </div>
+    <div class="pane on" id="p-props"></div>
+    <div class="pane" id="p-sched"></div>
+    <div class="pane" id="p-check"></div>
+    <div class="pane" id="p-auto"></div>
+    <div class="pane" id="p-vars"></div>
+    <div class="pane" id="p-set"></div>
+  </aside>
+</main>
+<footer>
+  <span>الموقع: <b id="stPos">–</b></span>
+  <span>المقياس: <b id="stScale">–</b></span>
+  <span id="stHint">انقر غرفة لتحديدها، اسحبها لتحريكها، واسحب المقابض لتغيير مقاساتها. الأعمدة مثبّتة.</span>
+</footer>
+</div>
+
+<script>
+'use strict';
+/* =========================================================
+   Data model — all units in meters. Origin = plot top-left,
+   x to the right, y downward (as the drawing is viewed).
+   Rooms hold NET (clear) dimensions; walls sit in the gaps.
+   ========================================================= */
+const TYPES = {
+  bedroom:  {n:'غرفة نوم',            c:'#f6dcb0', minA:9,   minW:2.7},
+  master:   {n:'غرفة نوم رئيسية',     c:'#f2cd94', minA:14,  minW:3.3},
+  majlis:   {n:'مجلس',                c:'#d3e7c6', minA:16,  minW:3.5},
+  dining:   {n:'مقلط',                c:'#e6d6ef', minA:9,   minW:2.4},
+  living:   {n:'صالة',                c:'#d4e6f3', minA:12,  minW:3.0},
+  kitchen:  {n:'مطبخ',                c:'#f6e6a6', minA:7,   minW:2.2, wet:true},
+  bath:     {n:'حمام',                c:'#c2e2ef', minA:2.4, minW:1.2, wet:true},
+  wc:       {n:'دورة مياه',           c:'#c9e7f2', minA:1.5, minW:0.9, wet:true},
+  laundry:  {n:'غسيل / خدمات',        c:'#d8eef0', minA:3,   minW:1.5, wet:true},
+  maid:     {n:'غرفة خادمة',          c:'#efe0cf', minA:6,   minW:2.2},
+  storage:  {n:'مستودع',              c:'#e5e1da', minA:2,   minW:1.2},
+  corridor: {n:'ممر',                 c:'#eeeeec', minA:0,   minW:1.0, long:true},
+  stair:    {n:'درج',                 c:'#dbd4c7', minA:0,   minW:1.2, long:true, fixed:true},
+  elevator: {n:'مصعد',                c:'#d2d2dc', minA:0,   minW:1.2, fixed:true},
+  balcony:  {n:'بلكونة',              c:'#cfa487', minA:0,   minW:1.0, long:true, outdoor:true},
+  roof:     {n:'سطح',                 c:'#e9e9e9', minA:0,   minW:0,   long:true, outdoor:true, fixed:true},
+  void:     {n:'فراغ',                c:'#f3f3f1', minA:0,   minW:0},
+  other:    {n:'أخرى',                c:'#ececf4', minA:0,   minW:0}
+};
+const DEF_SETTINGS = {grid:0.05, snapObj:true, snapGrid:true, wall:0.2, colsLocked:true, strictCols:true,
+  noOverlap:false, showDims:true, showChains:true, showAxes:true, showGrid:true, showBg:true, bgOpacity:0.55};
+
+let uid = 1; const nid = p => p + (uid++).toString(36) + Math.random().toString(36).slice(2,5);
+const R = (x,y,w,h,name,type,locked) => ({id:nid('r'),x,y,w,h,name,type,locked:!!locked});
+const C = (x,y,w,h) => ({id:nid('c'),x,y,w:w||0.2,h:h||0.5});
+
+function exampleState(){
+  return {
+    plot:{w:14,d:25,sb:{t:2,b:3.35,l:2,r:2},lab:{t:'جار',b:'شارع عرض 15م',l:'جار',r:'جار'}},
+    rooms:[
+      R(2,2,10,6.45,'سطح الدور الأول','roof',true),
+      R(7.55,8.45,4.45,3.1,'سطح الدور الأول','roof',true),
+      R(2.15,8.65,3.6,3.6,'غرفة نوم','bedroom'),
+      R(2.15,12.45,3.6,2.7,'مطبخ','kitchen'),
+      R(5.95,8.65,1.4,6.5,'ممر','corridor'),
+      R(7.55,11.75,1.6,1.5,'حمام','bath'),
+      R(7.55,13.45,1.6,1.7,'فراغ (غير مسمى)','void'),
+      R(2.15,15.35,4.6,4.0,'مجلس','majlis'),
+      R(6.75,15.35,2.4,4.0,'مقلط','dining'),
+      R(9.35,11.75,2.4,4.5,'درج','stair',true),
+      R(9.35,16.25,2.4,1.2,'بسطة الدرج','stair',true),
+      R(9.35,17.55,2.4,1.8,'مصعد','elevator',true),
+      R(2.15,19.55,7.0,1.8,'بلكونة','balcony',true)
+    ],
+    columns:[
+      C(2.05,8.75),C(4.3,8.55,0.5,0.2),C(7.45,8.75),
+      C(2.05,10.6),C(2.05,12.7),C(2.05,16.1),C(2.05,19.25),
+      C(7.45,11.9),C(7.45,14.7),
+      C(9.25,11.9),C(11.85,11.9),C(9.25,15.75),C(11.85,15.75),
+      C(9.25,17.4),C(11.85,17.4),C(9.25,19.25),C(11.85,19.25)
+    ],
+    bg:null, variants:[], settings:{...DEF_SETTINGS}, types:null
+  };
+}
+function blankState(){
+  const s = exampleState(); s.rooms=[]; s.columns=[]; s.variants=[]; return s;
+}
+
+/* ---------------- state, history, persistence ---------------- */
+let S = load() || exampleState();
+S.settings = {...DEF_SETTINGS, ...(S.settings||{})};
+if(S.types) for(const k in S.types) if(TYPES[k]) Object.assign(TYPES[k], S.types[k]);
+let view = {s:30, tx:0, ty:0};
+let sel = null;            // {k:'room'|'col', id}
+let mode = 'select';
+let hist = [], fut = [];
+let guides = [];           // snap guide lines while dragging
+let preview = null;        // auto-layout preview rooms
+let calibPts = [];
+let autoResults = [];
+
+const snap = () => JSON.stringify({plot:S.plot,rooms:S.rooms,columns:S.columns});
+function pushHist(){ hist.push(snap()); if(hist.length>120) hist.shift(); fut=[]; }
+function restore(str){ const o=JSON.parse(str); S.plot=o.plot; S.rooms=o.rooms; S.columns=o.columns; }
+function undo(){ if(!hist.length) return; fut.push(snap()); restore(hist.pop()); afterChange(); }
+function redo(){ if(!fut.length) return; hist.push(snap()); restore(fut.pop()); afterChange(); }
+
+function save(){
+  try{
+    const types={}; for(const k in TYPES) types[k]={minA:TYPES[k].minA,minW:TYPES[k].minW};
+    S.types=types;
+    localStorage.setItem('fpe-v1', JSON.stringify({...S,bg:null}));
+    if(S.bg) { try{ localStorage.setItem('fpe-v1-bg', JSON.stringify(S.bg)); }catch(e){} }
+    else localStorage.removeItem('fpe-v1-bg');
+  }catch(e){}
+}
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem('fpe-v1')||'null'); if(!s) return null;
+    try{ s.bg = JSON.parse(localStorage.getItem('fpe-v1-bg')||'null'); }catch(e){ s.bg=null; }
+    s.variants = s.variants||[];
+    return s;
+  }catch(e){ return null; }
+}
+
+/* ---------------- geometry helpers ---------------- */
+const EPS = 1e-6;
+const f2 = v => (Math.round(v*100)/100).toFixed(2);
+const r2 = v => Math.round(v*100)/100;
+const area = r => r.w*r.h;
+const env = () => ({x:S.plot.sb.l, y:S.plot.sb.t, w:S.plot.w-S.plot.sb.l-S.plot.sb.r, h:S.plot.d-S.plot.sb.t-S.plot.sb.b});
+function inter(a,b){ const x=Math.max(a.x,b.x), y=Math.max(a.y,b.y), X=Math.min(a.x+a.w,b.x+b.w), Y=Math.min(a.y+a.h,b.y+b.h); return (X-x>0.01&&Y-y>0.01)?{x,y,w:X-x,h:Y-y}:null; }
+const inside = (px,py,r,m=0) => px>r.x+m && px<r.x+r.w-m && py>r.y+m && py<r.y+r.h-m;
+const colRect = c => ({x:c.x-c.w/2, y:c.y-c.h/2, w:c.w, h:c.h});
+const grow = (r,d) => ({x:r.x-d,y:r.y-d,w:r.w+2*d,h:r.h+2*d});
+const roomById = id => S.rooms.find(r=>r.id===id);
+const colById = id => S.columns.find(c=>c.id===id);
+function colsInside(r){ return S.columns.filter(c=>inside(c.x,c.y,r,0.02)); }
+function esc(s){ return String(s).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
+function typeOf(r){ return TYPES[r.type]||TYPES.other; }
+
+/* Structural axes: cluster column centers */
+function axes(){
+  const cl = (vals)=>{ vals=[...vals].sort((a,b)=>a-b); const out=[]; for(const v of vals){ const l=out[out.length-1]; if(l && v-l.v/l.n<0.3){l.v+=v;l.n++;} else out.push({v,n:1}); } return out.map(o=>o.v/o.n); };
+  const xs = cl(S.columns.map(c=>c.x)), ys = cl(S.columns.map(c=>c.y));
+  return {xs, ys};
+}
+const AXL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+/* Decompose (union of base rects) minus (obstacles) into rectangles. */
+function freeRects(base, obst, minDim=0.5){
+  const ysS = new Set(); for(const r of [...base,...obst]){ ysS.add(r2(r.y)); ysS.add(r2(r.y+r.h)); }
+  const ys=[...ysS].sort((a,b)=>a-b);
+  const bands=[];
+  for(let i=0;i<ys.length-1;i++){
+    const y0=ys[i], y1=ys[i+1]; if(y1-y0<0.005) continue; const ym=(y0+y1)/2;
+    let ints = base.filter(r=>r.y<ym&&r.y+r.h>ym).map(r=>[r2(r.x),r2(r.x+r.w)]).sort((a,b)=>a[0]-b[0]);
+    const u=[]; for(const iv of ints){ const l=u[u.length-1]; if(l&&iv[0]<=l[1]+0.005) l[1]=Math.max(l[1],iv[1]); else u.push([...iv]); }
+    let cur=u;
+    for(const o of obst.filter(r=>r.y<ym&&r.y+r.h>ym)){
+      const a=r2(o.x), b=r2(o.x+o.w), nx=[];
+      for(const [p,q] of cur){ if(b<=p||a>=q){nx.push([p,q]);continue;} if(a>p) nx.push([p,a]); if(b<q) nx.push([b,q]); }
+      cur=nx;
+    }
+    bands.push({y0,y1,ints:cur.filter(([p,q])=>q-p>0.005)});
+  }
+  const rects=[]; let open=new Map();
+  for(const b of bands){
+    const nxt=new Map();
+    for(const [p,q] of b.ints){
+      const k=p+'|'+q, o=open.get(k);
+      if(o && Math.abs(o.y1-b.y0)<0.005){ o.y1=b.y1; nxt.set(k,o); open.delete(k); }
+      else nxt.set(k,{x0:p,x1:q,y0:b.y0,y1:b.y1});
+    }
+    for(const o of open.values()) rects.push(o);
+    open=nxt;
+  }
+  for(const o of open.values()) rects.push(o);
+  return rects.map(o=>({x:o.x0,y:o.y0,w:o.x1-o.x0,h:o.y1-o.y0})).filter(r=>r.w>=minDim&&r.h>=minDim);
+}
+const unionArea = rects => freeRects(rects,[],0).reduce((s,r)=>s+area(r),0);
+
+/* ---------------- DOM refs ---------------- */
+const $ = s => document.querySelector(s);
+const cv = $('#cv'), world = $('#world');
+function toast(msg,ms=2600){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove('show'),ms); }
+
+/* ---------------- view ---------------- */
+function fit(){
+  const b = cv.getBoundingClientRect(); if(!b.width) return;
+  const m=2.2, W=S.plot.w+2*m, H=S.plot.d+2*m;
+  view.s = Math.min(b.width/W, b.height/H);
+  view.tx = (b.width - S.plot.w*view.s)/2; view.ty = (b.height - S.plot.d*view.s)/2;
+  render();
+}
+function zoomAt(f, sx, sy){
+  const ns = Math.max(4, Math.min(600, view.s*f)); f = ns/view.s;
+  view.tx = sx - (sx-view.tx)*f; view.ty = sy - (sy-view.ty)*f; view.s = ns; render();
+}
+function toWorld(e){ const b=cv.getBoundingClientRect(); return {x:(e.clientX-b.left-view.tx)/view.s, y:(e.clientY-b.top-view.ty)/view.s, sx:e.clientX-b.left, sy:e.clientY-b.top}; }
+
+/* ---------------- rendering ---------------- */
+function render(){
+  world.setAttribute('transform',`translate(${view.tx},${view.ty}) scale(${view.s})`);
+  world.innerHTML = drawPlan({rooms: preview||S.rooms, interactive:true});
+  $('#stScale').textContent = '1 م = '+view.s.toFixed(1)+' بكسل';
+}
+function drawPlan(o){
+  const s = view.s, px = v=>v/s, st=S.settings, P=S.plot, E=env();
+  const fs = Math.max(0.2, 12/s);              // base font in meters
+  const NS='vector-effect="non-scaling-stroke"';
+  const issues = o.interactive ? conflictMap(o.rooms) : {};
+  let h='';
+  // plot + background
+  h+=`<rect x="0" y="0" width="${P.w}" height="${P.d}" fill="#fff" stroke="#9aa1ab" stroke-width="1.2" ${NS}/>`;
+  if(o.interactive && S.bg && st.showBg){
+    h+=`<image href="${S.bg.src}" x="${S.bg.x}" y="${S.bg.y}" width="${S.bg.iw*S.bg.k}" height="${S.bg.ih*S.bg.k}" opacity="${st.bgOpacity}" preserveAspectRatio="none" style="pointer-events:none"/>`;
+  }
+  if(o.interactive && st.showGrid && s>14){
+    const step = s>60?0.5:1; let g='';
+    for(let x=0;x<=P.w+1e-6;x+=step) g+=`M${x} 0V${P.d}`;
+    for(let y=0;y<=P.d+1e-6;y+=step) g+=`M0 ${y}H${P.w}`;
+    h+=`<path d="${g}" stroke="#000" stroke-opacity="${S.bg&&st.showBg?0.05:0.07}" stroke-width="1" ${NS} fill="none"/>`;
+  }
+  h+=`<rect x="${E.x}" y="${E.y}" width="${E.w}" height="${E.h}" fill="none" stroke="#0f6e5c" stroke-width="1.4" stroke-dasharray="6 4" ${NS}/>`;
+  // neighbour / street labels
+  if(o.interactive){
+    const lab=(x,y,t,rot)=>`<text x="${x}" y="${y}" font-size="${fs*1.1}" fill="#7a818c" text-anchor="middle" dominant-baseline="middle" ${rot?`transform="rotate(${rot} ${x} ${y})"`:''}>${esc(t)}</text>`;
+    h+=lab(P.w/2,-1.6,P.lab.t)+lab(P.w/2,P.d+1.6,P.lab.b)+lab(-1.6,P.d/2,P.lab.l,-90)+lab(P.w+1.6,P.d/2,P.lab.r,90);
+  }
+  // structural axes
+  const AX = axes();
+  if(st.showAxes && S.columns.length){
+    let d=''; const y0=E.y-0.6, y1=E.y+E.h+0.6, x0=E.x-0.6, x1=E.x+E.w+0.6;
+    AX.xs.forEach(x=>d+=`M${x} ${y0}V${y1}`); AX.ys.forEach(y=>d+=`M${x0} ${y}H${x1}`);
+    h+=`<path d="${d}" stroke="#7b5ea7" stroke-opacity=".45" stroke-width="1" stroke-dasharray="10 3 2 3" fill="none" ${NS}/>`;
+    if(o.interactive){
+      const rb=Math.max(0.22,9/s);
+      let last=-1e9;
+      AX.xs.forEach((x,i)=>{ if(x-last<rb*2.1) return; last=x; h+=`<circle cx="${x}" cy="${y0-rb}" r="${rb}" fill="#fff" stroke="#7b5ea7" stroke-width="1" ${NS}/><text x="${x}" y="${y0-rb}" font-size="${rb*1.1}" fill="#7b5ea7" text-anchor="middle" dominant-baseline="central">${AXL[i%26]}</text>`; });
+      last=-1e9;
+      AX.ys.forEach((y,i)=>{ if(y-last<rb*2.1) return; last=y; h+=`<circle cx="${x0-rb}" cy="${y}" r="${rb}" fill="#fff" stroke="#7b5ea7" stroke-width="1" ${NS}/><text x="${x0-rb}" y="${y}" font-size="${rb*1.1}" fill="#7b5ea7" text-anchor="middle" dominant-baseline="central">${i+1}</text>`; });
+    }
+  }
+  // rooms
+  const bgOn = o.interactive && S.bg && st.showBg;
+  for(const r of o.rooms){
+    const T=typeOf(r), bad=issues[r.id], isSel = o.interactive && sel && sel.k==='room' && sel.id===r.id;
+    const fill = r.type==='roof' ? 'url(#hatch)' : T.c;
+    h+=`<rect data-k="room" data-id="${r.id}" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="${fill}" fill-opacity="${bgOn?0.55:0.9}" stroke="${bad?'#c62828':(isSel?'#0f6e5c':'#3b4250')}" stroke-width="${bad||isSel?2.2:1.1}" ${bad?'stroke-dasharray="6 3"':''} ${NS}/>`;
+    if(r.locked && o.interactive) h+=`<text x="${r.x+r.w-px(6)}" y="${r.y+px(13)}" font-size="${px(11)}" fill="#6b7280" text-anchor="start" style="pointer-events:none">🔒</text>`;
+    // labels
+    const fr = Math.min(fs*1.05, r.h/3.4, r.w/(Math.max(r.name.length,12)*0.56)); if(fr < px(6)) continue;
+    const cx=r.x+r.w/2, cy=r.y+r.h/2, showD = st.showDims || !o.interactive;
+    h+=`<g style="pointer-events:none" text-anchor="middle" fill="#1d2330">`;
+    h+=`<text x="${cx}" y="${cy-(showD?fr*0.75:0)}" font-size="${fr}" font-weight="700" dominant-baseline="middle">${esc(r.name)}</text>`;
+    if(showD){
+      h+=`<text x="${cx}" y="${cy+fr*0.55}" font-size="${fr*0.82}" dominant-baseline="middle" direction="ltr" fill="#333a47">${f2(r.w)} × ${f2(r.h)}</text>`;
+      h+=`<text x="${cx}" y="${cy+fr*1.5}" font-size="${fr*0.78}" dominant-baseline="middle" direction="ltr" fill="#0f6e5c">${f2(area(r))} م‎²</text>`;
+    }
+    h+='</g>';
+  }
+  // columns
+  for(const c of S.columns){
+    const isSel = o.interactive && sel && sel.k==='col' && sel.id===c.id;
+    h+=`<rect data-k="col" data-id="${c.id}" x="${c.x-c.w/2}" y="${c.y-c.h/2}" width="${c.w}" height="${c.h}" fill="#2b2f36" stroke="${isSel?'#f59e0b':'#000'}" stroke-width="${isSel?3:1}" ${NS}/>`;
+  }
+  // chain dimensions
+  if(st.showChains) h+=chains(o.rooms, fs, AX);
+  if(!o.interactive) return h;
+  // selection: handles, dimension lines, clearances
+  if(sel && sel.k==='room'){
+    const r = o.rooms.find(x=>x.id===sel.id);
+    if(r){
+      h+=selDims(r, fs, o.rooms);
+      if(!r.locked && !preview){
+        const hs=px(9);
+        for(const [k,x,y] of handlePts(r)) h+=`<rect data-k="h" data-h="${k}" x="${x-hs/2}" y="${y-hs/2}" width="${hs}" height="${hs}" fill="#fff" stroke="#0f6e5c" stroke-width="1.6" ${NS} style="cursor:${({n:'ns',s:'ns',e:'ew',w:'ew',ne:'nesw',sw:'nesw',nw:'nwse',se:'nwse'})[k]}-resize"/>`;
+      }
+    }
+  }
+  if(sel && sel.k==='col'){
+    const c=colById(sel.id); if(c) h+=`<text x="${c.x}" y="${c.y-c.h/2-px(6)}" font-size="${fs*0.85}" text-anchor="middle" direction="ltr" fill="#b45309">${f2(c.x)}, ${f2(c.y)} (${f2(c.w)}×${f2(c.h)})</text>`;
+  }
+  for(const g of guides) h+=`<path d="${g}" stroke="#e11d48" stroke-width="1" stroke-dasharray="4 3" ${NS} fill="none" style="pointer-events:none"/>`;
+  if(drawRect) h+=`<rect x="${drawRect.x}" y="${drawRect.y}" width="${drawRect.w}" height="${drawRect.h}" fill="#0f6e5c22" stroke="#0f6e5c" stroke-width="1.5" ${NS}/><text x="${drawRect.x+drawRect.w/2}" y="${drawRect.y-px(8)}" font-size="${fs}" text-anchor="middle" direction="ltr" fill="#0f6e5c">${f2(drawRect.w)} × ${f2(drawRect.h)} = ${f2(area(drawRect))} م²</text>`;
+  for(const p of calibPts) h+=`<circle cx="${p.x}" cy="${p.y}" r="${px(5)}" fill="#e11d48"/>`;
+  if(calibPts.length===1 && hover) h+=`<path d="M${calibPts[0].x} ${calibPts[0].y}L${hover.x} ${hover.y}" stroke="#e11d48" stroke-width="1.5" ${NS}/><text x="${(calibPts[0].x+hover.x)/2}" y="${(calibPts[0].y+hover.y)/2-px(6)}" font-size="${fs}" fill="#e11d48" text-anchor="middle" direction="ltr">${f2(Math.hypot(hover.x-calibPts[0].x,hover.y-calibPts[0].y))}</text>`;
+  return h;
+}
+function handlePts(r){ const X=r.x,Y=r.y,W=r.w,H=r.h; return [['nw',X,Y],['n',X+W/2,Y],['ne',X+W,Y],['e',X+W,Y+H/2],['se',X+W,Y+H],['s',X+W/2,Y+H],['sw',X,Y+H],['w',X,Y+H/2]]; }
+
+function dimLine(x1,y1,x2,y2,val,fs,col='#c62828',off=0){
+  const NS='vector-effect="non-scaling-stroke"', t=fs*0.35, hor=Math.abs(y1-y2)<1e-9;
+  let h=`<path d="M${x1} ${y1}L${x2} ${y2}${hor?`M${x1} ${y1-t}V${y1+t}M${x2} ${y2-t}V${y2+t}`:`M${x1-t} ${y1}H${x1+t}M${x2-t} ${y2}H${x2+t}`}" stroke="${col}" stroke-width="1" ${NS} fill="none" style="pointer-events:none"/>`;
+  const mx=(x1+x2)/2, my=(y1+y2)/2;
+  if(Math.hypot(x2-x1,y2-y1) < fs*2.4) return h;
+  if(hor) h+=`<text x="${mx}" y="${my-fs*0.35}" font-size="${fs*0.82}" fill="${col}" text-anchor="middle" direction="ltr" style="pointer-events:none" paint-order="stroke" stroke="#fff" stroke-width="${fs*0.25}">${val}</text>`;
+  else h+=`<text x="${mx-fs*0.35}" y="${my}" font-size="${fs*0.82}" fill="${col}" text-anchor="middle" direction="ltr" transform="rotate(-90 ${mx-fs*0.35} ${my})" style="pointer-events:none" paint-order="stroke" stroke="#fff" stroke-width="${fs*0.25}">${val}</text>`;
+  return h;
+}
+function chains(rooms, fs, AX){
+  const P=S.plot, E=env(); let h='';
+  const merge = (arr)=>{ arr=[...new Set(arr.map(r2))].sort((a,b)=>a-b); const o=[]; for(const v of arr){ if(o.length && v-o[o.length-1] < S.settings.wall+0.06) o[o.length-1]=(o[o.length-1]+v)/2; else o.push(v);} return o; };
+  const chain=(pts,fixed,horiz,col)=>{ let s=''; for(let i=0;i<pts.length-1;i++){ const a=pts[i],b=pts[i+1]; if(b-a<0.3) continue; s+= horiz?dimLine(a,fixed,b,fixed,f2(b-a),fs,col):dimLine(fixed,a,fixed,b,f2(b-a),fs,col);} return s; };
+  // plot level: setbacks + envelope
+  h+=chain([0,E.x,E.x+E.w,P.w],-0.6,true,'#b91c1c');
+  h+=chain([0,E.y,E.y+E.h,P.d],-0.6,false,'#b91c1c');
+  h+=chain([0,E.x,E.x+E.w,P.w],P.d+0.6,true,'#b91c1c');
+  h+=chain([0,E.y,E.y+E.h,P.d],P.w+0.6,false,'#b91c1c');
+  // structural axes spacing
+  if(S.settings.showAxes && AX.xs.length>1) h+=chain(AX.xs,E.y-0.25,true,'#7b5ea7');
+  if(S.settings.showAxes && AX.ys.length>1) h+=chain(AX.ys,E.x-0.25,false,'#7b5ea7');
+  // room edges chain on the street side and right side
+  const inner = rooms.filter(r=>r.type!=='roof');
+  if(inner.length){
+    const xs=merge([E.x,E.x+E.w,...inner.flatMap(r=>[r.x,r.x+r.w])]);
+    const ys=merge([E.y,E.y+E.h,...inner.flatMap(r=>[r.y,r.y+r.h])]);
+    h+=chain(xs,P.d+1.25,true,'#475467');
+    h+=chain(ys,P.w+1.25,false,'#475467');
+  }
+  return h;
+}
+function selDims(r, fs, rooms){
+  let h='', off=Math.max(0.35, fs*1.2);
+  h+=dimLine(r.x,r.y-off,r.x+r.w,r.y-off,f2(r.w),fs,'#0f6e5c');
+  h+=dimLine(r.x-off,r.y,r.x-off,r.y+r.h,f2(r.h),fs,'#0f6e5c');
+  // clear distances to nearest neighbour/envelope in 4 directions
+  const others = rooms.filter(o=>o.id!==r.id && o.type!=='roof'), E=env();
+  const my=r.y+r.h/2, mx=r.x+r.w/2;
+  const ov=(a0,a1,b0,b1)=>Math.min(a1,b1)-Math.max(a0,b0)>0.05;
+  let best;
+  // right
+  best={d:E.x+E.w-(r.x+r.w)}; for(const o of others) if(ov(r.y,r.y+r.h,o.y,o.y+o.h) && o.x>=r.x+r.w-0.01){ const d=o.x-(r.x+r.w); if(d<best.d) best={d}; }
+  if(best.d>0.01 && best.d<30) h+=dimLine(r.x+r.w,my,r.x+r.w+best.d,my,f2(best.d),fs,'#2563a8');
+  best={d:r.x-E.x}; for(const o of others) if(ov(r.y,r.y+r.h,o.y,o.y+o.h) && o.x+o.w<=r.x+0.01){ const d=r.x-(o.x+o.w); if(d<best.d) best={d}; }
+  if(best.d>0.01 && best.d<30) h+=dimLine(r.x-best.d,my+fs*0.9,r.x,my+fs*0.9,f2(best.d),fs,'#2563a8');
+  best={d:E.y+E.h-(r.y+r.h)}; for(const o of others) if(ov(r.x,r.x+r.w,o.x,o.x+o.w) && o.y>=r.y+r.h-0.01){ const d=o.y-(r.y+r.h); if(d<best.d) best={d}; }
+  if(best.d>0.01 && best.d<30) h+=dimLine(mx,r.y+r.h,mx,r.y+r.h+best.d,f2(best.d),fs,'#2563a8');
+  best={d:r.y-E.y}; for(const o of others) if(ov(r.x,r.x+r.w,o.x,o.x+o.w) && o.y+o.h<=r.y+0.01){ const d=r.y-(o.y+o.h); if(d<best.d) best={d}; }
+  if(best.d>0.01 && best.d<30) h+=dimLine(mx+fs*0.9,r.y-best.d,mx+fs*0.9,r.y,f2(best.d),fs,'#2563a8');
+  return h;
+}
+// defs (hatch for roof)
+cv.insertAdjacentHTML('afterbegin',`<defs><pattern id="hatch" width="0.35" height="0.35" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="0.35" height="0.35" fill="#eeeeee"/><path d="M0 0V0.35" stroke="#c9c9c9" stroke-width="0.06"/></pattern></defs>`);
+
+/* ---------------- conflict detection (fast, for live highlighting) ---------------- */
+function conflictMap(rooms){
+  const m={}, E=env();
+  for(let i=0;i<rooms.length;i++){
+    const a=rooms[i];
+    if(S.columns.some(c=>inside(c.x,c.y,a,0.02))) m[a.id]=1;
+    if(a.x<E.x-0.01||a.y<E.y-0.01||a.x+a.w>E.x+E.w+0.01||a.y+a.h>E.y+E.h+0.01) m[a.id]=1;
+    for(let j=i+1;j<rooms.length;j++){ const b=rooms[j]; if(a.type!=='roof' && b.type!=='roof' && inter(a,b)){ m[a.id]=1; m[b.id]=1; } }
+  }
+  return m;
+}
+
+/* ---------------- snapping ---------------- */
+function targets(axis, exclude){
+  const t=[], st=S.settings, w=st.wall, E=env();
+  if(axis==='x'){ t.push(E.x,E.x+E.w,0,S.plot.w,E.x+w,E.x+E.w-w); }
+  else { t.push(E.y,E.y+E.h,0,S.plot.d,E.y+w,E.y+E.h-w); }
+  for(const c of S.columns){ const v=axis==='x'?c.x:c.y, d=(axis==='x'?c.w:c.h)/2; t.push(v, v-d, v+d, v-w/2, v+w/2); }
+  for(const r of S.rooms){ if(r.id===exclude) continue; const a=axis==='x'?r.x:r.y, b=a+(axis==='x'?r.w:r.h); t.push(a,b,a-w,b+w); }
+  return t;
+}
+function snapEdge(v, axis, exclude){
+  const st=S.settings, thr = 9/view.s;
+  if(st.snapObj){ let best=null, bd=thr; for(const t of targets(axis,exclude)){ const d=Math.abs(t-v); if(d<bd){bd=d;best=t;} } if(best!==null) return {v:best, snapped:true}; }
+  if(st.snapGrid){ const g=st.grid; return {v:Math.round(v/g)*g, snapped:false}; }
+  return {v, snapped:false};
+}
+// snap a moving rect: choose the edge with the smallest correction per axis
+function snapMove(r, exclude){
+  guides=[]; const res={...r};
+  for(const ax of ['x','y']){
+    const a = ax==='x'?r.x:r.y, len = ax==='x'?r.w:r.h;
+    const s1=snapEdge(a,ax,exclude), s2=snapEdge(a+len,ax,exclude);
+    let pick;
+    if(s1.snapped && (!s2.snapped || Math.abs(s1.v-a)<=Math.abs(s2.v-a-len))) pick={v:s1.v, g:s1.v};
+    else if(s2.snapped) pick={v:s2.v-len, g:s2.v};
+    else pick={v:s1.v};
+    res[ax]=r2(pick.v);
+    if(pick.g!==undefined) guides.push(ax==='x'?`M${pick.g} -1V${S.plot.d+1}`:`M-1 ${pick.g}H${S.plot.w+1}`);
+  }
+  return res;
+}
+function snapPoint(x,y,exclude){
+  guides=[]; const sx=snapEdge(x,'x',exclude), sy=snapEdge(y,'y',exclude);
+  if(sx.snapped) guides.push(`M${sx.v} -1V${S.plot.d+1}`); if(sy.snapped) guides.push(`M-1 ${sy.v}H${S.plot.w+1}`);
+  return {x:r2(sx.v), y:r2(sy.v)};
+}
+function validRect(r, id){
+  const st=S.settings;
+  if(r.w<0.3||r.h<0.3) return false;
+  if(st.strictCols && S.columns.some(c=>inside(c.x,c.y,r,0.02))) return 'col';
+  if(st.noOverlap && S.rooms.some(o=>o.id!==id && o.type!=='roof' && inter(o,r))) return 'ov';
+  return true;
+}
+
+/* ---------------- pointer interaction ---------------- */
+let drag=null, drawRect=null, hover=null; const ptrs=new Map(); let pinch=null;
+cv.addEventListener('pointerdown', e=>{
+  cv.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2){ const [a,b]=[...ptrs.values()]; const bb=cv.getBoundingClientRect(); pinch={d:Math.hypot(a.x-b.x,a.y-b.y), cx:(a.x+b.x)/2-bb.left, cy:(a.y+b.y)/2-bb.top, s:view.s, tx:view.tx, ty:view.ty}; if(drag&&drag.orig){ restore(drag.orig); } drag=null; drawRect=null; render(); return; }
+  const p=toWorld(e), tgt=e.target.closest('[data-k]'), k=tgt&&tgt.dataset.k;
+  if(e.button===1 || mode==='pan' || e.button===2){ drag={t:'pan',sx:p.sx,sy:p.sy,tx:view.tx,ty:view.ty}; return; }
+  if(preview){ drag={t:'pan',sx:p.sx,sy:p.sy,tx:view.tx,ty:view.ty}; return; }
+  if(mode==='select'){
+    if(k==='h'){ const r=roomById(sel.id); drag={t:'resize',h:tgt.dataset.h,id:r.id,o:{...r},p,orig:snap(),moved:false}; return; }
+    if(k==='col'){ sel={k:'col',id:tgt.dataset.id}; const c=colById(sel.id); if(!S.settings.colsLocked) drag={t:'mcol',id:c.id,o:{...c},p,orig:snap(),moved:false}; else drag={t:'pan',sx:p.sx,sy:p.sy,tx:view.tx,ty:view.ty,click:true}; render(); showProps(); return; }
+    if(k==='room'){ const r=roomById(tgt.dataset.id); sel={k:'room',id:r.id}; if(!r.locked) drag={t:'move',id:r.id,o:{...r},p,orig:snap(),moved:false}; else drag={t:'pan',sx:p.sx,sy:p.sy,tx:view.tx,ty:view.ty}; render(); showProps(); return; }
+    sel=null; drag={t:'pan',sx:p.sx,sy:p.sy,tx:view.tx,ty:view.ty}; render(); showProps(); return;
+  }
+  if(mode==='room'){ const q=snapPoint(p.x,p.y); drag={t:'draw',a:q}; drawRect={x:q.x,y:q.y,w:0,h:0}; return; }
+  if(mode==='column'){
+    const q=snapPoint(p.x,p.y); pushHist(); const c=C(q.x,q.y,colDefault.w,colDefault.h); S.columns.push(c); sel={k:'col',id:c.id}; guides=[]; afterChange(); return;
+  }
+  if(mode==='calib'){
+    calibPts.push({x:p.x,y:p.y});
+    if(calibPts.length===2){
+      const [a,b]=calibPts, cur=Math.hypot(b.x-a.x,b.y-a.y);
+      setTimeout(()=>{
+        const v=parseFloat((prompt('أدخل الطول الحقيقي بين النقطتين (بالمتر):', f2(cur))||'').replace(',','.'));
+        if(S.bg && v>0 && cur>0){ const f=v/cur; S.bg.k*=f; S.bg.x = a.x-(a.x-S.bg.x)*f; S.bg.y = a.y-(a.y-S.bg.y)*f; toast('تمت المعايرة. استخدم «مطابقة نقطة» لضبط موضع الصورة.'); }
+        else if(!S.bg) toast('ارفع صورة المخطط أولاً.');
+        calibPts=[]; setMode('select'); save(); render();
+      },30);
+    }
+    render(); return;
+  }
+  if(mode==='align'){
+    if(!S.bg){ toast('ارفع صورة المخطط أولاً.'); return; }
+    setTimeout(()=>{
+      const v=(prompt('هذه النقطة من الصورة تقابل أي إحداثي في المخطط؟ اكتب س، ص بالمتر\n(0,0 = الزاوية العلوية اليسرى لحد الأرض)', '0,0')||'').split(/[,،\s]+/).map(Number);
+      if(v.length>=2 && v.every(n=>!isNaN(n))){ S.bg.x += v[0]-p.x; S.bg.y += v[1]-p.y; save(); render(); toast('تمت مطابقة الصورة.'); }
+      setMode('select');
+    },30);
+    return;
+  }
+  if(mode==='bgmove'){ if(S.bg) drag={t:'bg',p,o:{x:S.bg.x,y:S.bg.y}}; return; }
+});
+cv.addEventListener('pointermove', e=>{
+  if(ptrs.has(e.pointerId)) ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  const p=toWorld(e); hover=p;
+  $('#stPos').textContent = `${f2(p.x)} , ${f2(p.y)}`;
+  if(pinch && ptrs.size===2){
+    const [a,b]=[...ptrs.values()], bb=cv.getBoundingClientRect(), d=Math.hypot(a.x-b.x,a.y-b.y);
+    const ns=Math.max(4,Math.min(600,pinch.s*d/pinch.d)), f=ns/pinch.s, cx=(a.x+b.x)/2-bb.left, cy=(a.y+b.y)/2-bb.top;
+    view.s=ns; view.tx=cx-(pinch.cx-pinch.tx)*f; view.ty=cy-(pinch.cy-pinch.ty)*f; render(); return;
+  }
+  if(!drag){ if(mode==='calib'&&calibPts.length===1) render(); return; }
+  const dx=p.x-(drag.p?drag.p.x:0), dy=p.y-(drag.p?drag.p.y:0);
+  if(drag.t==='pan'){ view.tx=drag.tx+(p.sx-drag.sx); view.ty=drag.ty+(p.sy-drag.sy); render(); return; }
+  if(drag.t==='bg'){ S.bg.x=drag.o.x+dx; S.bg.y=drag.o.y+dy; render(); return; }
+  if(drag.t==='draw'){ const q=snapPoint(p.x,p.y); drawRect={x:Math.min(drag.a.x,q.x),y:Math.min(drag.a.y,q.y),w:Math.abs(q.x-drag.a.x),h:Math.abs(q.y-drag.a.y)}; render(); return; }
+  if(drag.t==='move'){
+    if(!drag.moved && Math.hypot(dx,dy)*view.s<3) return;
+    drag.moved=true; const r=roomById(drag.id), n=snapMove({...drag.o,x:drag.o.x+dx,y:drag.o.y+dy}, r.id);
+    const v=validRect(n,r.id); if(v===true){ r.x=n.x; r.y=n.y; drag.blocked=false; } else drag.blocked=v;
+    render(); showProps(true); return;
+  }
+  if(drag.t==='resize'){
+    drag.moved=true; const r=roomById(drag.id), o=drag.o, hd=drag.h; let x0=o.x,y0=o.y,x1=o.x+o.w,y1=o.y+o.h; guides=[]; const gs=[];
+    if(hd.includes('w')){ const s=snapEdge(o.x+dx,'x',r.id); x0=Math.min(s.v,x1-0.3); if(s.snapped) gs.push(`M${x0} -1V${S.plot.d+1}`); }
+    if(hd.includes('e')){ const s=snapEdge(x1+dx,'x',r.id); x1=Math.max(s.v,x0+0.3); if(s.snapped) gs.push(`M${x1} -1V${S.plot.d+1}`); }
+    if(hd.includes('n')){ const s=snapEdge(o.y+dy,'y',r.id); y0=Math.min(s.v,y1-0.3); if(s.snapped) gs.push(`M-1 ${y0}H${S.plot.w+1}`); }
+    if(hd.includes('s')){ const s=snapEdge(y1+dy,'y',r.id); y1=Math.max(s.v,y0+0.3); if(s.snapped) gs.push(`M-1 ${y1}H${S.plot.w+1}`); }
+    guides=gs; const n={x:r2(x0),y:r2(y0),w:r2(x1-x0),h:r2(y1-y0)};
+    const v=validRect(n,r.id); if(v===true){ Object.assign(r,n); drag.blocked=false; } else drag.blocked=v;
+    render(); showProps(true); return;
+  }
+  if(drag.t==='mcol'){ drag.moved=true; const c=colById(drag.id), q=snapPoint(drag.o.x+dx,drag.o.y+dy,null); c.x=q.x; c.y=q.y; render(); showProps(true); return; }
+});
+function endPtr(e){
+  ptrs.delete(e.pointerId); if(ptrs.size<2) pinch=null;
+  if(!drag) return;
+  const d=drag; drag=null; guides=[];
+  if(d.t==='draw'){
+    const r=drawRect; drawRect=null;
+    if(r && r.w>=0.3 && r.h>=0.3){
+      const t=$('#newType').value; pushHist();
+      const nr=R(r2(r.x),r2(r.y),r2(r.w),r2(r.h),TYPES[t].n,t,!!TYPES[t].fixed);
+      S.rooms.push(nr); sel={k:'room',id:nr.id}; setMode('select'); afterChange(); tab('props');
+      setTimeout(()=>{ const i=$('#pName'); if(i){ i.focus(); i.select(); } },50);
+    } else render();
+    return;
+  }
+  if((d.t==='move'||d.t==='resize'||d.t==='mcol') && d.moved){
+    hist.push(d.orig); if(hist.length>120) hist.shift(); fut=[];
+    if(d.blocked==='col') toast('تم إيقاف الحركة عند آخر موضع صالح: لا يُسمح بوقوع عمود داخل فراغ الغرفة.');
+    if(d.blocked==='ov') toast('تم إيقاف الحركة: التداخل بين الغرف غير مسموح (من الإعدادات).');
+    afterChange(); return;
+  }
+  render();
+}
+cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('contextmenu', e=>e.preventDefault());
+cv.addEventListener('wheel', e=>{ e.preventDefault(); const p=toWorld(e); zoomAt(Math.exp(-e.deltaY*0.0015), p.sx, p.sy); }, {passive:false});
+cv.addEventListener('dblclick', e=>{ const t=e.target.closest('[data-k="room"]'); if(t){ tab('props'); const i=$('#pName'); if(i){i.focus();i.select();} } });
+const colDefault={w:0.2,h:0.5};
+
+function setMode(m){
+  mode=m; calibPts=[]; document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+  cv.classList.toggle('pan', m==='pan'||m==='bgmove'); cv.classList.toggle('draw', ['room','column','calib','align'].includes(m));
+  const hints={select:'انقر غرفة لتحديدها، اسحبها لتحريكها، واسحب المقابض لتغيير مقاساتها. الأعمدة مثبّتة.',room:'اسحب على اللوحة لرسم غرفة. تلتصق الحواف تلقائياً بالمحاور والأعمدة والجدران.',column:'انقر لوضع عمود. يمكن تعديل مقاسه من الخصائص.',pan:'اسحب لتحريك اللوحة، واستخدم العجلة أو إصبعين للتكبير.',calib:'انقر نقطة البداية ثم نقطة النهاية لطول معروف في الصورة (مثل 14.00 لعرض الأرض).',align:'انقر نقطة معروفة في الصورة (مثل زاوية حد الأرض) ثم أدخل إحداثياتها.',bgmove:'اسحب لتحريك صورة المخطط.'};
+  $('#stHint').textContent=hints[m]||''; render();
+}
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ if(['calib','align','bgmove'].includes(b.dataset.mode)&&!S.bg){ toast('ارفع صورة المخطط أولاً.'); return; } setMode(b.dataset.mode); });
+
+/* ---------------- keyboard ---------------- */
+document.addEventListener('keydown', e=>{
+  if(e.target.matches('input,select,textarea')) return;
+  const k=e.key.toLowerCase();
+  if((e.ctrlKey||e.metaKey)&&k==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
+  if((e.ctrlKey||e.metaKey)&&k==='y'){ e.preventDefault(); redo(); return; }
+  if((e.ctrlKey||e.metaKey)&&k==='d'){ e.preventDefault(); dupSel(); return; }
+  if(k==='delete'||k==='backspace'){ delSel(); return; }
+  if(k==='escape'){ sel=null; preview=null; setMode('select'); showProps(); return; }
+  if(k==='v') setMode('select'); if(k==='r') setMode('room'); if(k==='c') setMode('column'); if(k==='h') setMode('pan');
+  if(k.startsWith('arrow') && sel && sel.k==='room'){
+    const r=roomById(sel.id); if(!r||r.locked) return; e.preventDefault();
+    const st=(e.shiftKey?10:1)*S.settings.grid, n={...r};
+    if(k==='arrowleft') n.x-=st; if(k==='arrowright') n.x+=st; if(k==='arrowup') n.y-=st; if(k==='arrowdown') n.y+=st;
+    n.x=r2(n.x); n.y=r2(n.y); const v=validRect(n,r.id);
+    if(v===true){ pushHist(); Object.assign(r,n); afterChange(); } else toast(v==='col'?'الحركة ستضع عموداً داخل الغرفة.':'الحركة تسبب تداخلاً.');
+  }
+});
+
+/* ---------------- actions ---------------- */
+function delSel(){
+  if(!sel) return;
+  if(sel.k==='room'){ const r=roomById(sel.id); if(!r) return; if(r.locked){ toast('الغرفة مقفلة. ألغِ القفل أولاً.'); return; } pushHist(); S.rooms=S.rooms.filter(x=>x.id!==r.id); }
+  else { if(S.settings.colsLocked){ toast('الأعمدة مثبّتة. ألغِ تثبيتها من الإعدادات لحذف عمود.'); return; } pushHist(); S.columns=S.columns.filter(c=>c.id!==sel.id); }
+  sel=null; afterChange();
+}
+function dupSel(){
+  if(!sel||sel.k!=='room') return; const r=roomById(sel.id); pushHist();
+  const n={...r,id:nid('r'),x:r2(r.x+0.5),y:r2(r.y+0.5),locked:false}; S.rooms.push(n); sel={k:'room',id:n.id}; afterChange();
+}
+function splitSel(dir){
+  const r=roomById(sel.id); if(!r) return; const w=S.settings.wall, AX=axes();
+  const vert = dir ? dir==='v' : r.w>=r.h;
+  let cut = vert ? r.x+r.w/2 : r.y+r.h/2;
+  const cand = (vert?AX.xs:AX.ys).filter(a=>a>(vert?r.x:r.y)+1 && a<(vert?r.x+r.w:r.y+r.h)-1);
+  if(cand.length){ const c=cand.reduce((b,a)=>Math.abs(a-cut)<Math.abs(b-cut)?a:b); if(Math.abs(c-cut)<(vert?r.w:r.h)*0.25) cut=c; }
+  cut=r2(cut); pushHist();
+  const a={...r}, b={...r,id:nid('r'),name:r.name+' 2',locked:false};
+  if(vert){ a.w=r2(cut-w/2-r.x); b.x=r2(cut+w/2); b.w=r2(r.x+r.w-b.x); }
+  else { a.h=r2(cut-w/2-r.y); b.y=r2(cut+w/2); b.h=r2(r.y+r.h-b.y); }
+  if(a.w<0.3||a.h<0.3||b.w<0.3||b.h<0.3){ hist.pop(); toast('الغرفة أصغر من أن تُقسم.'); return; }
+  Object.assign(r,a); S.rooms.push(b); afterChange(); toast('تم التقسيم بجدار '+f2(w)+' م'+(cand.length?' على أقرب محور إنشائي.':'.'));
+}
+function rotateSel(){
+  const r=roomById(sel.id); const n={...r,w:r.h,h:r.w}; n.x=r2(r.x+(r.w-r.h)/2); n.y=r2(r.y+(r.h-r.w)/2);
+  const v=validRect(n,r.id); if(v!==true){ toast('التدوير يضع عموداً داخل الغرفة أو يسبب تداخلاً.'); return; }
+  pushHist(); Object.assign(r,n); afterChange();
+}
+
+/* ---------------- panels ---------------- */
+function tab(t){ document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t)); document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='p-'+t)); refreshPane(t); }
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+const curTab = ()=> document.querySelector('.tabs button.on').dataset.tab;
+function refreshPane(t){ t=t||curTab(); ({props:showProps,sched:showSched,check:showCheck,auto:showAuto,vars:showVars,set:showSet})[t](); }
+
+function afterChange(){ save(); render(); refreshPane(); updateBadge(); }
+
+function num(id,val,step=0.05,min){ return `<input type="number" id="${id}" value="${f2(val)}" step="${step}" ${min!==undefined?`min="${min}"`:''}>`; }
+function typeOpts(cur){ return Object.entries(TYPES).map(([k,t])=>`<option value="${k}" ${k===cur?'selected':''}>${t.n}</option>`).join(''); }
+
+function showProps(light){
+  const p=$('#p-props');
+  if(light && curTab()==='props' && sel && sel.k==='room'){ const r=roomById(sel.id); if(r){ for(const [id,v] of [['pX',r.x],['pY',r.y],['pW',r.w],['pH',r.h]]){ const i=$('#'+id); if(i) i.value=f2(v);} const a=$('#pA'); if(a) a.textContent=f2(area(r))+' م²'; } return; }
+  if(light && sel && sel.k==='col'){ const c=colById(sel.id); if(c){ const i1=$('#cX'),i2=$('#cY'); if(i1){i1.value=f2(c.x);i2.value=f2(c.y);} } return; }
+  if(curTab()!=='props') return;
+  if(!sel){
+    const E=env();
+    p.innerHTML=`<h3>طريقة العمل</h3>
+    <div class="hint">
+    1) ارفع صورة المخطط ثم «معايرة المقياس» بالنقر على طرفي بُعد معروف (مثل عرض الأرض 14.00) وإدخال طوله.<br>
+    2) «مطابقة نقطة»: انقر زاوية حد الأرض في الصورة وأدخل 0,0.<br>
+    3) ضع الأعمدة بأداة «+ عمود» ثم تُثبَّت تلقائياً، وارسم الغرف فوق الصورة بأداة «+ غرفة».<br>
+    4) عدّل بالسحب أو بالأرقام، وراجع تبويب «التحقق والاقتراحات»، أو جرّب «ترتيب تلقائي» لتوليد بدائل لا تمس الأعمدة.<br>
+    القياسات بالمتر، والغرف بأبعادها الصافية، والفراغ بينها يمثل سماكة الجدار (${f2(S.settings.wall)} م).</div>
+    <h3>حدود الأرض والارتدادات</h3>
+    <div class="grid2">
+      <label class="fld"><span>عرض الأرض</span>${num('plW',S.plot.w,0.05,1)}</label>
+      <label class="fld"><span>عمق الأرض</span>${num('plD',S.plot.d,0.05,1)}</label>
+      <label class="fld"><span>ارتداد خلفي (أعلى)</span>${num('sbT',S.plot.sb.t)}</label>
+      <label class="fld"><span>ارتداد أمامي (أسفل)</span>${num('sbB',S.plot.sb.b)}</label>
+      <label class="fld"><span>ارتداد يمين</span>${num('sbR',S.plot.sb.r)}</label>
+      <label class="fld"><span>ارتداد يسار</span>${num('sbL',S.plot.sb.l)}</label>
+      <label class="fld"><span>الجهة العلوية</span><input type="text" id="lbT" value="${esc(S.plot.lab.t)}"></label>
+      <label class="fld"><span>الجهة السفلية</span><input type="text" id="lbB" value="${esc(S.plot.lab.b)}"></label>
+      <label class="fld"><span>الجهة اليمنى</span><input type="text" id="lbR" value="${esc(S.plot.lab.r)}"></label>
+      <label class="fld"><span>الجهة اليسرى</span><input type="text" id="lbL" value="${esc(S.plot.lab.l)}"></label>
+    </div>
+    <div class="kpi"><div><b>${f2(S.plot.w*S.plot.d)}</b><span>مساحة الأرض م²</span></div><div><b>${f2(E.w)} × ${f2(E.h)}</b><span>حدود البناء المسموحة</span></div></div>`;
+    const bind=(id,fn)=>{ const i=$('#'+id); i.onchange=()=>{ pushHist(); fn(i.type==='number'?parseFloat(i.value)||0:i.value); afterChange(); }; };
+    bind('plW',v=>S.plot.w=Math.max(1,v)); bind('plD',v=>S.plot.d=Math.max(1,v));
+    bind('sbT',v=>S.plot.sb.t=Math.max(0,v)); bind('sbB',v=>S.plot.sb.b=Math.max(0,v)); bind('sbR',v=>S.plot.sb.r=Math.max(0,v)); bind('sbL',v=>S.plot.sb.l=Math.max(0,v));
+    bind('lbT',v=>S.plot.lab.t=v); bind('lbB',v=>S.plot.lab.b=v); bind('lbR',v=>S.plot.lab.r=v); bind('lbL',v=>S.plot.lab.l=v);
+    return;
+  }
+  if(sel.k==='col'){
+    const c=colById(sel.id); if(!c){ sel=null; return showProps(); }
+    const L=S.settings.colsLocked;
+    p.innerHTML=`<h3>عمود</h3>
+    <div class="hint">${L?'الأعمدة مثبّتة لحماية المخطط الإنشائي. لتعديلها: الإعدادات ← إلغاء تثبيت الأعمدة.':'تنبيه: الأعمدة غير مثبّتة حالياً.'}</div>
+    <div class="grid2">
+      <label class="fld"><span>المركز س</span>${num('cX',c.x)}</label><label class="fld"><span>المركز ص</span>${num('cY',c.y)}</label>
+      <label class="fld"><span>العرض</span>${num('cW',c.w,0.05,0.1)}</label><label class="fld"><span>الطول</span>${num('cH',c.h,0.05,0.1)}</label>
+    </div>
+    <div class="row"><button class="btn sm dng" id="cDel" ${L?'disabled':''}>حذف العمود</button></div>`;
+    ['cX','cY','cW','cH'].forEach(id=>{ const i=$('#'+id); i.disabled=L; i.onchange=()=>{ pushHist(); c[{cX:'x',cY:'y',cW:'w',cH:'h'}[id]]=r2(parseFloat(i.value)||0); afterChange(); }; });
+    $('#cDel').onclick=delSel; return;
+  }
+  const r=roomById(sel.id); if(!r){ sel=null; return showProps(); }
+  const T=typeOf(r), ci=colsInside(r), L=r.locked;
+  p.innerHTML=`<h3>الغرفة</h3>
+  <div class="grid2">
+    <label class="fld" style="grid-column:1/-1"><span>الاسم (كما في المخطط)</span><input type="text" id="pName" value="${esc(r.name)}"></label>
+    <label class="fld" style="grid-column:1/-1"><span>النوع</span><select id="pType">${typeOpts(r.type)}</select></label>
+    <label class="fld"><span>العرض (س)</span>${num('pW',r.w,0.05,0.3)}</label>
+    <label class="fld"><span>العمق (ص)</span>${num('pH',r.h,0.05,0.3)}</label>
+    <label class="fld"><span>الموضع س</span>${num('pX',r.x)}</label>
+    <label class="fld"><span>الموضع ص</span>${num('pY',r.y)}</label>
+    <label class="fld"><span>المساحة المطلوبة (تعديل العمق)</span>${num('pArea',area(r),0.1,0.1)}</label>
+    <div class="fld"><span>المساحة الحالية</span><b id="pA" style="padding:6px 0">${f2(area(r))} م²</b></div>
+  </div>
+  <label class="chk"><input type="checkbox" id="pLock" ${L?'checked':''}> قفل الغرفة (لا تتأثر بالسحب أو الترتيب التلقائي)</label>
+  <div class="row">
+    <button class="btn sm" id="pDup">نسخ</button>
+    <button class="btn sm" id="pRot">تدوير 90°</button>
+    <button class="btn sm" id="pSplitV">تقسيم طولي</button>
+    <button class="btn sm" id="pSplitH">تقسيم عرضي</button>
+    <button class="btn sm dng" id="pDel">حذف</button>
+  </div>
+  <div class="hint">الحد الأدنى الإرشادي لـ«${T.n}»: مساحة ${f2(T.minA)} م²، أقل بُعد ${f2(T.minW)} م. نسبة الأبعاد: ${f2(Math.max(r.w,r.h)/Math.min(r.w,r.h))}.
+  ${ci.length?`<br><b style="color:var(--err)">يوجد ${ci.length} عمود داخل فراغ هذه الغرفة.</b>`:''}</div>`;
+  const set=(fn)=>{ pushHist(); fn(); afterChange(); };
+  $('#pName').onchange=e=>set(()=>r.name=e.target.value.trim()||T.n);
+  $('#pType').onchange=e=>set(()=>{ const old=TYPES[r.type]; if(!r.name||r.name===(old&&old.n)) r.name=TYPES[e.target.value].n; r.type=e.target.value; });
+  const numSet=(id,fn)=>{ $('#'+id).disabled=L; $('#'+id).onchange=e=>{ const v=parseFloat(e.target.value); if(isNaN(v)) return; const n={...r}; fn(n,v); n.x=r2(n.x);n.y=r2(n.y);n.w=r2(Math.max(0.3,n.w));n.h=r2(Math.max(0.3,n.h)); const ok=validRect(n,r.id); if(ok==='col') toast('تنبيه: هذا المقاس يضع عموداً داخل الغرفة.'); if(ok==='ov'){ toast('المقاس يسبب تداخلاً.'); showProps(); return; } if(ok==='col' && S.settings.strictCols){ showProps(); return; } set(()=>Object.assign(r,n)); }; };
+  numSet('pW',(n,v)=>n.w=v); numSet('pH',(n,v)=>n.h=v); numSet('pX',(n,v)=>n.x=v); numSet('pY',(n,v)=>n.y=v); numSet('pArea',(n,v)=>n.h=v/n.w);
+  $('#pLock').onchange=e=>set(()=>r.locked=e.target.checked);
+  $('#pDup').onclick=dupSel; $('#pDel').onclick=delSel; $('#pRot').onclick=rotateSel; $('#pSplitV').onclick=()=>splitSel('v'); $('#pSplitH').onclick=()=>splitSel('h');
+  ['pDup','pRot','pSplitV','pSplitH','pDel'].forEach(id=>{ if(L && id!=='pDup') $('#'+id).disabled=true; });
+}
+
+function metrics(rooms){
+  const w=S.settings.wall, closed=rooms.filter(r=>!typeOf(r).outdoor), open=rooms.filter(r=>typeOf(r).outdoor && r.type!=='roof');
+  const net=closed.reduce((s,r)=>s+area(r),0), opn=open.reduce((s,r)=>s+area(r),0);
+  const gross=unionArea(closed.map(r=>grow(r,w/2)));
+  const E=env(), plotA=S.plot.w*S.plot.d;
+  return {net,opn,gross,plotA,envA:E.w*E.h,cov:gross/plotA*100,walls:gross-net};
+}
+function showSched(){
+  const m=metrics(S.rooms), rows=[...S.rooms].filter(r=>r.type!=='roof').sort((a,b)=>a.y-b.y||a.x-b.x);
+  $('#p-sched').innerHTML=`
+  <div class="kpi">
+    <div><b>${f2(m.net)}</b><span>صافي مساحة الفراغات المغلقة م²</span></div>
+    <div><b>${f2(m.gross)}</b><span>المسطح الإجمالي التقديري مع الجدران م²</span></div>
+    <div><b>${f2(m.opn)}</b><span>مساحات مكشوفة (بلكونات) م²</span></div>
+    <div><b>${f2(m.cov)}%</b><span>نسبة المسطح إلى مساحة الأرض</span></div>
+    <div><b>${f2(m.envA)}</b><span>مساحة حدود البناء م²</span></div>
+    <div><b>${f2(m.plotA)}</b><span>مساحة الأرض م²</span></div>
+  </div>
+  <table><thead><tr><th>الفراغ</th><th>العرض</th><th>العمق</th><th>المساحة</th></tr></thead><tbody>
+  ${rows.map(r=>`<tr data-id="${r.id}" class="${sel&&sel.id===r.id?'sel':''}"><td>${esc(r.name)}${r.locked?' 🔒':''}</td><td class="n">${f2(r.w)}</td><td class="n">${f2(r.h)}</td><td class="n">${f2(area(r))}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد غرف</td></tr>'}
+  </tbody></table>
+  <p class="hint">المسطح الإجمالي = اتحاد الغرف المغلقة بعد إضافة نصف سماكة الجدار (${f2(S.settings.wall/2)} م) من كل جهة؛ وهو تقدير هندسي وليس بديلاً عن حساب المكتب الهندسي. الأسطح لا تُحتسب.</p>`;
+  $('#p-sched').querySelectorAll('tbody tr[data-id]').forEach(tr=>tr.onclick=()=>{ sel={k:'room',id:tr.dataset.id}; render(); showSched(); });
+}
+
+/* ---------------- analysis & suggestions ---------------- */
+function analyze(){
+  const out=[], rooms=S.rooms, E=env(), w=S.settings.wall, nm=r=>`«${r.name}»`;
+  const blocked=(n,id)=> S.columns.some(c=>inside(c.x,c.y,n,0.02)) || rooms.some(o=>o.id!==id && o.type!=='roof' && inter(o,grow(n,Math.max(0,w-0.02)))) || n.x<E.x-0.01||n.y<E.y-0.01||n.x+n.w>E.x+E.w+0.01||n.y+n.h>E.y+E.h+0.01;
+  // 1 columns inside rooms
+  for(const r of rooms) for(const c of colsInside(r)){
+    const cr=colRect(c), opts=[
+      {n:{...r,w:r2(cr.x-r.x)}, d:'تقليص الجهة اليمنى إلى وجه العمود'},
+      {n:{...r,x:r2(cr.x+cr.w),w:r2(r.x+r.w-cr.x-cr.w)}, d:'تقليص الجهة اليسرى إلى وجه العمود'},
+      {n:{...r,h:r2(cr.y-r.y)}, d:'تقليص الجهة السفلية إلى وجه العمود'},
+      {n:{...r,y:r2(cr.y+cr.h),h:r2(r.y+r.h-cr.y-cr.h)}, d:'تقليص الجهة العلوية إلى وجه العمود'}
+    ].filter(o=>o.n.w>=0.5&&o.n.h>=0.5).sort((a,b)=>area(b.n)-area(a.n));
+    const o=opts[0];
+    out.push({lvl:'err',id:r.id,txt:`عمود عند (${f2(c.x)}، ${f2(c.y)}) يقع داخل فراغ ${nm(r)}.`+(o?` الاقتراح: ${o.d} (المساحة تصبح ${f2(area(o.n))} م² بدلاً من ${f2(area(r))}).`:''),fix:o&&!r.locked?()=>Object.assign(roomById(r.id),o.n):null});
+  }
+  // 2 overlaps
+  for(let i=0;i<rooms.length;i++) for(let j=i+1;j<rooms.length;j++){
+    const a=rooms[i], b=rooms[j]; if(a.type==='roof'||b.type==='roof') continue; const ix=inter(a,b); if(!ix) continue;
+    let m = (!a.locked && (b.locked || area(a)<=area(b))) ? a : (!b.locked ? b : null), o = m===a?b:a;
+    let fix=null, d='';
+    if(m){
+      const n={...m};
+      if(ix.w<=ix.h){ if(m.x+m.w/2 < o.x+o.w/2){ n.w=r2(o.x-w-m.x); } else { const nx=r2(o.x+o.w+w); n.w=r2(m.x+m.w-nx); n.x=nx; } }
+      else { if(m.y+m.h/2 < o.y+o.h/2){ n.h=r2(o.y-w-m.y); } else { const ny=r2(o.y+o.h+w); n.h=r2(m.y+m.h-ny); n.y=ny; } }
+      if(n.w>=0.5&&n.h>=0.5){ fix=()=>Object.assign(roomById(m.id),n); d=` الاقتراح: تعديل ${nm(m)} إلى ${f2(n.w)} × ${f2(n.h)} مع ترك جدار ${f2(w)} م.`; }
+    }
+    out.push({lvl:'err',id:a.id,txt:`تداخل بين ${nm(a)} و${nm(b)} بمساحة ${f2(area(ix))} م².`+d,fix});
+  }
+  // 3 outside envelope
+  for(const r of rooms){
+    if(r.x<E.x-0.01||r.y<E.y-0.01||r.x+r.w>E.x+E.w+0.01||r.y+r.h>E.y+E.h+0.01){
+      const x0=Math.max(r.x,E.x), y0=Math.max(r.y,E.y), x1=Math.min(r.x+r.w,E.x+E.w), y1=Math.min(r.y+r.h,E.y+E.h);
+      const n={...r,x:r2(x0),y:r2(y0),w:r2(x1-x0),h:r2(y1-y0)};
+      out.push({lvl:'err',id:r.id,txt:`${nm(r)} يتجاوز حدود البناء (الارتدادات).`+(n.w>0.3&&n.h>0.3?` الاقتراح: قصّه إلى ${f2(n.w)} × ${f2(n.h)}.`:''),fix:(n.w>0.3&&n.h>0.3&&!r.locked)?()=>Object.assign(roomById(r.id),n):null});
+    }
+  }
+  // 4 minimum sizes
+  for(const r of rooms){
+    const T=typeOf(r), a=area(r), mn=Math.min(r.w,r.h);
+    if((T.minA && a < T.minA-0.01) || (T.minW && mn < T.minW-0.01)){
+      // try to grow into free space
+      let fix=null, d='';
+      if(!r.locked){
+        const needA = Math.max(0,T.minA-a);
+        const tries=[];
+        for(const dir of ['l','r','t','b']){
+          for(let s=0.05;s<=4.001;s+=0.05){
+            const n={...r}; if(dir==='l'){n.x-=s;n.w+=s;} if(dir==='r'){n.w+=s;} if(dir==='t'){n.y-=s;n.h+=s;} if(dir==='b'){n.h+=s;}
+            if(blocked(n,r.id)) break;
+            if(area(n)>=T.minA-0.01 && Math.min(n.w,n.h)>=T.minW-0.01){ tries.push({n,s,dir}); break; }
+          }
+        }
+        tries.sort((p,q)=>p.s-q.s);
+        if(tries[0]){ const n=tries[0].n; ['x','y','w','h'].forEach(k=>n[k]=r2(n[k])); fix=()=>Object.assign(roomById(r.id),n); d=` الاقتراح: توسعة ${f2(tries[0].s)} م ${({l:'يساراً',r:'يميناً',t:'للأعلى',b:'للأسفل'})[tries[0].dir]} في مساحة فارغة.`; }
+        else d=' لا توجد مساحة فارغة مجاورة كافية؛ يُقترح إعادة توزيع الغرف المجاورة أو استخدام الترتيب التلقائي.';
+      }
+      out.push({lvl:'warn',id:r.id,txt:`${nm(r)} أقل من الحد الإرشادي (${f2(a)} م²، أقل بُعد ${f2(mn)} م؛ الإرشادي ${f2(T.minA)} م² و${f2(T.minW)} م).`+d,fix});
+    }
+  }
+  // 5 edges close to (not on) a column face line → align
+  for(const r of rooms){
+    if(r.locked) continue;
+    // only columns that sit along the edge being tested (a wall line through the column)
+    const near=S.columns.filter(c=>c.x>r.x-0.6&&c.x<r.x+r.w+0.6&&c.y>r.y-0.6&&c.y<r.y+r.h+0.6);
+    const AXs=near.flatMap(c=>[c.x-w/2,c.x+w/2]), AYs=near.flatMap(c=>[c.y-w/2,c.y+w/2]);
+    const edges=[['x',r.x,'l'],['x',r.x+r.w,'r'],['y',r.y,'t'],['y',r.y+r.h,'b']];
+    for(const [ax,v,side] of edges){
+      const list=ax==='x'?AXs:AYs; let best=null,bd=0.26;
+      for(const t of list){ const d=Math.abs(t-v); if(d>0.04 && d<bd){bd=d;best=t;} }
+      if(best===null) continue;
+      if(list.some(t=>Math.abs(t-v)<=0.04)) continue;
+      const n={...r}; if(side==='l'){n.w=r2(r.x+r.w-best);n.x=r2(best);} if(side==='r') n.w=r2(best-r.x); if(side==='t'){n.h=r2(r.y+r.h-best);n.y=r2(best);} if(side==='b') n.h=r2(best-r.y);
+      if(blocked(n,r.id)) continue;
+      out.push({lvl:'info',id:r.id,txt:`حافة ${nm(r)} ${({l:'اليسرى',r:'اليمنى',t:'العلوية',b:'السفلية'})[side]} تبعد ${f2(bd)} م عن خط العمود. الاقتراح: محاذاتها ليمر الجدار على العمود (المساحة ${f2(area(n))} م²).`,fix:()=>Object.assign(roomById(r.id),n)});
+    }
+  }
+  // 6 slivers (gaps wider than a wall but too narrow to use)
+  for(const r of rooms){
+    if(r.locked) continue;
+    for(const o of rooms){
+      if(o.id===r.id) continue;
+      const ovY=Math.min(r.y+r.h,o.y+o.h)-Math.max(r.y,o.y), ovX=Math.min(r.x+r.w,o.x+o.w)-Math.max(r.x,o.x);
+      let g=null,n=null;
+      if(ovY>0.5 && o.x>=r.x+r.w){ g=o.x-(r.x+r.w); n={...r,w:r2(o.x-w-r.x)}; }
+      else if(ovX>0.5 && o.y>=r.y+r.h){ g=o.y-(r.y+r.h); n={...r,h:r2(o.y-w-r.y)}; }
+      if(g!==null && g>w+0.04 && g<0.7 && !blocked(n,r.id))
+        out.push({lvl:'info',id:r.id,txt:`فراغ ضيق غير مستغل بعرض ${f2(g)} م بين ${nm(r)} و${nm(o)}. الاقتراح: توسعة ${nm(r)} ليبقى جدار ${f2(w)} م فقط (+${f2(area(n)-area(r))} م²).`,fix:()=>Object.assign(roomById(r.id),n)});
+    }
+  }
+  // rooms built over a roof area
+  for(const rf of rooms.filter(x=>x.type==='roof')) for(const r of rooms){ if(r.type==='roof') continue; const ix=inter(rf,r); if(ix) out.push({lvl:'info',id:r.id,txt:`«${r.name}» مقام على مساحة ${nm(rf)} (${f2(area(ix))} م²)، أي إضافة بناء على السطح.`}); }
+  // 7 proportions
+  for(const r of rooms){ const T=typeOf(r); if(T.long) continue; const q=Math.max(r.w,r.h)/Math.min(r.w,r.h); if(q>2.2) out.push({lvl:'info',id:r.id,txt:`${nm(r)} مستطيل جداً (نسبة ${f2(q)}:1). يُفضّل ألا تتجاوز 2:1 للغرف المعيشية.`}); }
+  return out;
+}
+function updateBadge(){ const n=analyze().filter(i=>i.lvl!=='info').length; const b=$('#issBadge'); b.hidden=!n; b.textContent=n; }
+function showCheck(){
+  const iss=analyze(), p=$('#p-check'), fixable=iss.filter(i=>i.fix);
+  const nec=iss.filter(i=>i.fix&&i.lvl!=='info');
+  p.innerHTML=`<div class="row"><button class="btn pri sm" id="fixAll" ${nec.length?'':'disabled'}>تطبيق الإصلاحات الضرورية (${nec.length})</button><span class="hint">الأعمدة لا تُعدَّل أبداً، والغرف المقفلة لا تتغير.</span></div>
+  ${iss.length?iss.map((i,k)=>`<div class="iss ${i.lvl}" data-k="${k}"><div>${i.lvl==='err'?'⛔':i.lvl==='warn'?'⚠️':'💡'} ${esc(i.txt)}</div>${i.fix?`<div class="fx"><button class="btn sm" data-fix="${k}">تطبيق</button></div>`:''}</div>`).join(''):'<div class="empty">لا توجد ملاحظات. المخطط متسق مع الأعمدة وحدود البناء.</div>'}
+  <p class="hint">الحدود الدنيا للمساحات قيم إرشادية افتراضية قابلة للتعديل من «الإعدادات»، وليست اشتراطات نظامية؛ يُرجع لاشتراطات البلدية والكود السعودي للبناء.</p>`;
+  p.querySelectorAll('.iss').forEach(d=>d.onclick=e=>{ if(e.target.dataset.fix) return; const i=iss[+d.dataset.k]; if(i.id){ sel={k:'room',id:i.id}; render(); } });
+  p.querySelectorAll('[data-fix]').forEach(b=>b.onclick=()=>{ pushHist(); iss[+b.dataset.fix].fix(); afterChange(); });
+  $('#fixAll').onclick=()=>{ pushHist(); for(let pass=0;pass<12;pass++){ const l=analyze().filter(i=>i.fix && i.lvl!=='info'); if(!l.length) break; l[0].fix(); } afterChange(); toast('تم تطبيق الإصلاحات. الاقتراحات التحسينية (💡) تُطبّق منفردة. التراجع بـ ↶'); };
+}
+
+/* ---------------- automatic layout ---------------- */
+let autoCfg={region:'footprint', n:4, wet:true};
+function rng(seed){ return ()=>{ seed=(seed*1664525+1013904223)%4294967296; return seed/4294967296; }; }
+function slice(rect, items, AX, rand, out, cuts){
+  if(!items.length) return;
+  if(items.length===1){ out.push({it:items[0],r:rect}); return; }
+  const tot=items.reduce((s,i)=>s+i.t,0);
+  let vert = rect.w>=rect.h; if(rand()<0.22) vert=!vert;
+  const L = vert?rect.w:rect.h;
+  // candidate split indices
+  let acc=0, cands=[];
+  for(let k=1;k<items.length;k++){ acc+=items[k-1].t; cands.push({k,ratio:acc/tot}); }
+  cands.sort((a,b)=>Math.abs(a.ratio-0.5)-Math.abs(b.ratio-0.5));
+  const c = cands[rand()<0.7?0:Math.min(cands.length-1,1+Math.floor(rand()*2))];
+  let cut = (vert?rect.x:rect.y) + L*c.ratio;
+  const base=vert?rect.x:rect.y, axs=(vert?AX.xs:AX.ys).filter(a=>a>base+1.0 && a<base+L-1.0);
+  let snappedCol=false;
+  if(axs.length){ const near=axs.reduce((b,a)=>Math.abs(a-cut)<Math.abs(b-cut)?a:b); if(Math.abs(near-cut) < Math.max(0.5, L*0.14)){ cut=near; snappedCol=true; } }
+  if(!snappedCol) cut=Math.round(cut/0.05)*0.05;
+  cut=Math.min(base+L-0.6, Math.max(base+0.6, cut));
+  cuts.n++; if(snappedCol) cuts.col++;
+  const A=items.slice(0,c.k), B=items.slice(c.k);
+  const ra = vert?{x:rect.x,y:rect.y,w:cut-rect.x,h:rect.h}:{x:rect.x,y:rect.y,w:rect.w,h:cut-rect.y};
+  const rb = vert?{x:cut,y:rect.y,w:rect.x+rect.w-cut,h:rect.h}:{x:rect.x,y:cut,w:rect.w,h:rect.y+rect.h-cut};
+  slice(ra,A,AX,rand,out,cuts); slice(rb,B,AX,rand,out,cuts);
+}
+function autoLayout(itemsIn){
+  const w=S.settings.wall, hw=w/2, E=env(), AX=axes();
+  const fixed=S.rooms.filter(r=>r.locked || !itemsIn.find(i=>i.id===r.id));
+  let base;
+  if(autoCfg.region==='footprint') base=itemsIn.map(i=>grow(roomById(i.id),hw));
+  else base=[{x:E.x+hw,y:E.y+hw,w:E.w-w,h:E.h-w}];
+  const obst=fixed.map(r=>grow(r,hw));
+  const free=freeRects(base,obst,1.0);
+  if(!free.length) return [];
+  const freeA=free.reduce((s,r)=>s+area(r),0);
+  const results=[], seen=new Set();
+  for(let seed=1; seed<=500; seed++){
+    const rand=rng(seed*7919+13);
+    let items=itemsIn.map(i=>({...i}));
+    // shuffle with bias (keep some order variety)
+    for(let i=items.length-1;i>0;i--){ const j=Math.floor(rand()*(i+1)); [items[i],items[j]]=[items[j],items[i]]; }
+    if(autoCfg.wet && rand()<0.7){ items.sort((a,b)=>(TYPES[b.type]?.wet?1:0)-(TYPES[a.type]?.wet?1:0)); if(rand()<0.5) items.reverse(); }
+    // distribute items over free rects proportionally to area
+    const bins=free.map(r=>({r,cap:area(r),items:[],sum:0}));
+    const totT=items.reduce((s,i)=>s+i.t,0), k=freeA/totT;
+    for(const it of [...items].sort((a,b)=>b.t-a.t + (rand()-0.5)*2)){
+      const b=bins.reduce((best,x)=> (x.cap-x.sum-it.t*k) > (best.cap-best.sum-it.t*k) ? x : best);
+      b.items.push(it); b.sum+=it.t*k;
+    }
+    // restore shuffled order inside each bin
+    for(const b of bins) b.items.sort((p,q)=>items.indexOf(p)-items.indexOf(q));
+    const out=[], cuts={n:0,col:0};
+    for(const b of bins) slice(b.r,b.items,AX,rand,out,cuts);
+    const rooms=out.map(o=>({...roomById(o.it.id), x:r2(o.r.x+hw), y:r2(o.r.y+hw), w:r2(o.r.w-w), h:r2(o.r.h-w)}));
+    if(rooms.length!==items.length || rooms.some(r=>r.w<0.6||r.h<0.6)) continue;
+    // score
+    let sc=0;
+    for(const r of rooms){
+      const it=itemsIn.find(i=>i.id===r.id), T=typeOf(r), a=area(r);
+      sc += Math.abs(a-it.t*k)/Math.max(1,it.t*k)*4;
+      const q=Math.max(r.w,r.h)/Math.min(r.w,r.h); if(!T.long) sc+=Math.max(0,q-1.8)*2.5;
+      if(T.minW && Math.min(r.w,r.h)<T.minW) sc+=(T.minW-Math.min(r.w,r.h))*6;
+      if(T.minA && a<T.minA) sc+=(T.minA-a)/T.minA*5;
+      sc += colsInside(r).length*12;
+    }
+    if(autoCfg.wet){ const wets=rooms.filter(r=>typeOf(r).wet); for(let i=0;i<wets.length;i++) for(let j=i+1;j<wets.length;j++){ if(inter(grow(wets[i],w*0.6),grow(wets[j],w*0.6))) sc-=1.2; } }
+    sc -= cuts.col*0.4;
+    const sig=rooms.map(r=>[r.id,Math.round(r.x*2),Math.round(r.y*2),Math.round(r.w*2)].join()).sort().join('|');
+    if(seen.has(sig)) continue; seen.add(sig);
+    results.push({rooms, score:sc, colCuts:cuts.col, cuts:cuts.n, unused:freeA-rooms.reduce((s,r)=>s+(r.w+w)*(r.h+w),0)});
+  }
+  results.sort((a,b)=>a.score-b.score);
+  return results.slice(0,autoCfg.n);
+}
+function showAuto(){
+  const p=$('#p-auto'); const cand=S.rooms.filter(r=>!r.locked && !typeOf(r).fixed);
+  p.innerHTML=`<div class="hint">يعيد توزيع الغرف غير المقفلة داخل المساحة المحددة، مع تثبيت الأعمدة والغرف المقفلة (الدرج، المصعد، البلكونة، الأسطح…). خطوط التقسيم تُحاذى مع محاور الأعمدة كلما أمكن، ويُترك جدار ${f2(S.settings.wall)} م بين الغرف.</div>
+  <h3>المساحة المتاحة</h3>
+  <label class="chk"><input type="radio" name="reg" value="footprint" ${autoCfg.region==='footprint'?'checked':''}> نفس البصمة الحالية للغرف (لا يتغير الشكل الخارجي)</label>
+  <label class="chk"><input type="radio" name="reg" value="envelope" ${autoCfg.region==='envelope'?'checked':''}> كامل حدود البناء ناقص الغرف المقفلة</label>
+  <label class="chk"><input type="checkbox" id="aWet" ${autoCfg.wet?'checked':''}> تجميع المناطق الرطبة (مطبخ/حمام/غسيل) لتقليل التمديدات</label>
+  <h3>الغرف المشمولة والمساحة المستهدفة</h3>
+  <table><thead><tr><th></th><th>الغرفة</th><th>الحالية</th><th>المستهدفة م²</th></tr></thead><tbody>
+  ${cand.map(r=>`<tr><td><input type="checkbox" class="aInc" data-id="${r.id}" checked></td><td>${esc(r.name)}</td><td class="n">${f2(area(r))}</td><td><input type="number" class="aT" data-id="${r.id}" value="${f2(r.target||area(r))}" step="0.5" min="1" style="width:80px"></td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد غرف غير مقفلة</td></tr>'}
+  </tbody></table>
+  <div class="row"><button class="btn pri" id="aRun" ${cand.length?'':'disabled'}>توليد بدائل</button>${preview?'<button class="btn" id="aCancel">إلغاء المعاينة</button>':''}</div>
+  <div class="cards" id="aRes"></div>
+  <p class="hint">المساحات المستهدفة تُعامل كنِسَب؛ تُكبَّر أو تُصغَّر بالتناسب لتملأ المساحة المتاحة. الترتيب المقترح مبدئي ويُراجع للأبواب والفتحات والحركة.</p>`;
+  p.querySelectorAll('input[name=reg]').forEach(i=>i.onchange=()=>autoCfg.region=i.value);
+  $('#aWet').onchange=e=>autoCfg.wet=e.target.checked;
+  p.querySelectorAll('.aT').forEach(i=>i.onchange=()=>{ const r=roomById(i.dataset.id); r.target=parseFloat(i.value)||area(r); save(); });
+  if($('#aCancel')) $('#aCancel').onclick=()=>{ preview=null; render(); showAuto(); };
+  $('#aRun').onclick=()=>{
+    const items=[...p.querySelectorAll('.aInc')].filter(i=>i.checked).map(i=>{ const r=roomById(i.dataset.id); const t=parseFloat(p.querySelector(`.aT[data-id="${r.id}"]`).value)||area(r); return {id:r.id,t,type:r.type}; });
+    if(items.length<2){ toast('اختر غرفتين على الأقل.'); return; }
+    autoResults=autoLayout(items);
+    if(!autoResults.length){ toast('تعذر توليد بدائل؛ جرّب «كامل حدود البناء» أو ألغِ قفل بعض الغرف.'); return; }
+    drawAutoCards();
+  };
+  if(autoResults.length) drawAutoCards();
+}
+function miniSvg(rooms){
+  const E=env(), m=0.6, vb=`${E.x-m} ${E.y-m} ${E.w+2*m} ${E.h+2*m}`;
+  const all=S.rooms.map(r=>rooms.find(x=>x.id===r.id)||r);
+  const sv=view.s; view.s=Math.min(260/(E.w+2*m), 340/(E.h+2*m))*0.9;
+  const st={...S.settings}; S.settings.showChains=false;
+  const h=drawPlan({rooms:all,interactive:false}); S.settings=st; view.s=sv;
+  return `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="hatch2" width="0.35" height="0.35" patternUnits="userSpaceOnUse"><rect width=".35" height=".35" fill="#eee"/></pattern></defs>${h.replaceAll('url(#hatch)','url(#hatch2)')}</svg>`;
+}
+function drawAutoCards(){
+  const box=$('#aRes'); if(!box) return;
+  box.innerHTML=autoResults.map((res,i)=>`<div class="card ${preview&&preview._i===i?'on':''}" data-i="${i}">${miniSvg(res.rooms)}<div class="meta">البديل ${i+1} · تقييم ${f2(Math.max(0,100-res.score*4))}/100<br>${res.colCuts}/${res.cuts} خطوط على محاور الأعمدة</div><div class="row"><button class="btn sm" data-pv="${i}">معاينة</button><button class="btn sm pri" data-ap="${i}">اعتماد</button><button class="btn sm" data-sv="${i}">حفظ كبديل</button></div></div>`).join('');
+  const roomsOf=i=>S.rooms.map(r=>{ const x=autoResults[i].rooms.find(q=>q.id===r.id); return x?{...r,x:x.x,y:x.y,w:x.w,h:x.h}:r; });
+  box.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.pv; preview=roomsOf(i); preview._i=i; render(); showAuto(); toast('معاينة فقط — اضغط «اعتماد» للتطبيق أو Esc للإلغاء.'); });
+  box.querySelectorAll('[data-ap]').forEach(b=>b.onclick=()=>{ pushHist(); S.rooms=roomsOf(+b.dataset.ap); preview=null; afterChange(); toast('تم اعتماد البديل. يمكنك التراجع بـ ↶'); });
+  box.querySelectorAll('[data-sv]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.sv; S.variants.push({id:nid('v'),name:'ترتيب تلقائي '+(i+1),rooms:JSON.parse(JSON.stringify(roomsOf(i))),at:Date.now()}); save(); toast('حُفظ في تبويب «البدائل».'); });
+}
+
+/* ---------------- variants ---------------- */
+function showVars(){
+  const p=$('#p-vars'), V=S.variants;
+  const names=[...new Set(S.rooms.filter(r=>r.type!=='roof').map(r=>r.name))];
+  const areaOf=(rooms,n)=>{ const a=rooms.filter(r=>r.name===n).reduce((s,r)=>s+area(r),0); return a?f2(a):'–'; };
+  p.innerHTML=`<div class="hint">احفظ المخطط الحالي كبديل لمقارنة اقتراحات التعديل. الأعمدة واحدة في جميع البدائل.</div>
+  <div class="row"><input type="text" id="vName" placeholder="اسم البديل (مثلاً: توسعة المطبخ)" style="flex:1"><button class="btn pri sm" id="vAdd">حفظ الحالي</button></div>
+  ${V.length?`<table><thead><tr><th>البديل</th><th>صافي م²</th><th></th></tr></thead><tbody>${V.map((v,i)=>`<tr><td>${esc(v.name)}</td><td class="n">${f2(metrics(v.rooms).net)}</td><td style="white-space:nowrap"><button class="btn sm" data-ld="${i}">فتح</button> <button class="btn sm dng" data-dl="${i}">×</button></td></tr>`).join('')}</tbody></table>
+  <h3>مقارنة المساحات (م²)</h3>
+  <div style="overflow-x:auto"><table><thead><tr><th>الفراغ</th><th>الحالي</th>${V.map(v=>`<th>${esc(v.name)}</th>`).join('')}</tr></thead><tbody>
+  ${names.map(n=>`<tr><td>${esc(n)}</td><td class="n">${areaOf(S.rooms,n)}</td>${V.map(v=>`<td class="n">${areaOf(v.rooms,n)}</td>`).join('')}</tr>`).join('')}
+  <tr><td><b>الصافي</b></td><td class="n"><b>${f2(metrics(S.rooms).net)}</b></td>${V.map(v=>`<td class="n"><b>${f2(metrics(v.rooms).net)}</b></td>`).join('')}</tr>
+  </tbody></table></div>`:'<div class="empty">لا توجد بدائل محفوظة بعد.</div>'}`;
+  $('#vAdd').onclick=()=>{ S.variants.push({id:nid('v'),name:$('#vName').value.trim()||('بديل '+(V.length+1)),rooms:JSON.parse(JSON.stringify(S.rooms)),at:Date.now()}); save(); showVars(); };
+  p.querySelectorAll('[data-ld]').forEach(b=>b.onclick=()=>{ pushHist(); S.rooms=JSON.parse(JSON.stringify(V[+b.dataset.ld].rooms)); sel=null; afterChange(); toast('تم فتح البديل. يمكنك التراجع بـ ↶'); });
+  p.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{ if(confirm('حذف هذا البديل؟')){ V.splice(+b.dataset.dl,1); save(); showVars(); } });
+}
+
+/* ---------------- settings ---------------- */
+function showSet(){
+  const st=S.settings, p=$('#p-set');
+  const ck=(k,t)=>`<label class="chk"><input type="checkbox" data-s="${k}" ${st[k]?'checked':''}> ${t}</label>`;
+  p.innerHTML=`<h3>الأعمدة</h3>
+  ${ck('colsLocked','تثبيت الأعمدة (لا يمكن تحريكها أو حذفها)')}
+  ${ck('strictCols','منع أي حركة تضع عموداً داخل فراغ غرفة')}
+  <h3>الالتقاط والرسم</h3>
+  ${ck('snapObj','الالتقاط إلى الأعمدة والمحاور وحواف الغرف (مع ترك سماكة الجدار)')}
+  ${ck('snapGrid','الالتقاط إلى الشبكة')}
+  ${ck('noOverlap','منع تداخل الغرف')}
+  <div class="grid2"><label class="fld"><span>خطوة الشبكة (م)</span><select data-n="grid">${[0.01,0.05,0.1,0.25,0.5].map(v=>`<option ${v===st.grid?'selected':''}>${v}</option>`).join('')}</select></label>
+  <label class="fld"><span>سماكة الجدار الداخلي (م)</span><input type="number" data-n="wall" value="${st.wall}" step="0.05" min="0"></label></div>
+  <h3>العرض</h3>
+  ${ck('showDims','إظهار أبعاد ومساحة كل غرفة')}
+  ${ck('showChains','إظهار سلاسل الأبعاد')}
+  ${ck('showAxes','إظهار المحاور الإنشائية والمسافات بينها')}
+  ${ck('showGrid','إظهار الشبكة')}
+  ${ck('showBg','إظهار صورة المخطط')}
+  <label class="fld"><span>شفافية الصورة</span><input type="range" min="0.05" max="1" step="0.05" data-n="bgOpacity" value="${st.bgOpacity}"></label>
+  ${S.bg?'<div class="row"><button class="btn sm dng" id="bgDel">إزالة صورة المخطط</button></div>':''}
+  <h3>الحدود الدنيا الإرشادية</h3>
+  <div class="hint">قيم افتراضية للتنبيه فقط، عدّلها وفق اشتراطات جهتك.</div>
+  <table class="typetbl"><thead><tr><th>النوع</th><th>أقل مساحة</th><th>أقل بُعد</th></tr></thead><tbody>
+  ${Object.entries(TYPES).filter(([k])=>!['roof','void','other'].includes(k)).map(([k,t])=>`<tr><td>${t.n}</td><td><input type="number" data-t="${k}" data-f="minA" value="${t.minA}" step="0.5" min="0"></td><td><input type="number" data-t="${k}" data-f="minW" value="${t.minW}" step="0.1" min="0"></td></tr>`).join('')}
+  </tbody></table>`;
+  p.querySelectorAll('[data-s]').forEach(i=>i.onchange=()=>{ st[i.dataset.s]=i.checked; afterChange(); });
+  p.querySelectorAll('[data-n]').forEach(i=>i.oninput=()=>{ st[i.dataset.n]=parseFloat(i.value); save(); render(); updateBadge(); });
+  p.querySelectorAll('[data-t]').forEach(i=>i.onchange=()=>{ TYPES[i.dataset.t][i.dataset.f]=parseFloat(i.value)||0; save(); updateBadge(); });
+  if($('#bgDel')) $('#bgDel').onclick=()=>{ S.bg=null; save(); render(); showSet(); };
+}
+
+/* ---------------- files ---------------- */
+$('#fImg').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return; const rd=new FileReader();
+  rd.onload=()=>{ const img=new Image(); img.onload=()=>{
+    // downscale very large images to keep the browser storage light
+    let src=rd.result, iw=img.width, ih=img.height; const MAX=2400;
+    if(Math.max(iw,ih)>MAX){ const k=MAX/Math.max(iw,ih), c=document.createElement('canvas'); c.width=Math.round(iw*k); c.height=Math.round(ih*k); c.getContext('2d').drawImage(img,0,0,c.width,c.height); src=c.toDataURL('image/jpeg',0.88); iw=c.width; ih=c.height; }
+    const k=S.plot.w/iw; // initial guess: image width = plot width
+    S.bg={src,iw,ih,k,x:0,y:0}; S.settings.showBg=true; save(); fit();
+    toast('تم رفع الصورة. الخطوة التالية: «معايرة المقياس».',4000); setMode('calib');
+  }; img.src=rd.result; };
+  rd.readAsDataURL(f); e.target.value='';
+};
+function download(name, data, type){ const a=document.createElement('a'); a.href=typeof data==='string'&&data.startsWith('data:')?data:URL.createObjectURL(new Blob([data],{type})); a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
+$('#bSave').onclick=()=>download('مخطط.json', JSON.stringify(S,null,1), 'application/json');
+$('#fJson').onchange=e=>{ const f=e.target.files[0]; if(!f) return; f.text().then(t=>{ try{ const o=JSON.parse(t); if(!o.plot||!o.rooms) throw 0; pushHist(); S={...exampleState(),...o,settings:{...DEF_SETTINGS,...(o.settings||{})},variants:o.variants||[]}; sel=null; afterChange(); fit(); toast('تم فتح الملف.'); }catch(err){ toast('تعذر قراءة الملف: صيغة غير صحيحة.'); } }); e.target.value=''; };
+$('#bCsv').onclick=()=>{
+  const m=metrics(S.rooms), rows=[['الفراغ','النوع','العرض م','العمق م','المساحة م²','س','ص']];
+  S.rooms.filter(r=>r.type!=='roof').forEach(r=>rows.push([r.name,typeOf(r).n,f2(r.w),f2(r.h),f2(area(r)),f2(r.x),f2(r.y)]));
+  rows.push([],['صافي الفراغات المغلقة','','','',f2(m.net)],['المسطح الإجمالي التقديري','','','',f2(m.gross)],['المكشوف','','','',f2(m.opn)]);
+  download('جدول-المساحات.csv','﻿'+rows.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');
+};
+$('#bPng').onclick=()=>{
+  const P=S.plot, m=2.6, k=60, W=Math.round((P.w+2*m)*k), H=Math.round((P.d+2*m)*k);
+  const sv={...view}, ss=sel; sel=null; view={s:k,tx:m*k,ty:m*k};
+  const inner=drawPlan({rooms:S.rooms,interactive:true}); view=sv; sel=ss;
+  const defs=cv.querySelector('defs').outerHTML;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" font-family="Tahoma, Arial, sans-serif"><rect width="100%" height="100%" fill="#fff"/>${defs}<g transform="translate(${m*k},${m*k}) scale(${k})">${inner}</g></svg>`;
+  const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); c.width=W; c.height=H; c.getContext('2d').drawImage(img,0,0); download('مخطط.png', c.toDataURL('image/png')); };
+  img.onerror=()=>toast('تعذر التصدير في هذا المتصفح.');
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+};
+$('#bExample').onclick=()=>{ if(!confirm('تحميل المثال سيستبدل الغرف والأعمدة الحالية (يمكن التراجع). متابعة؟')) return; pushHist(); const e=exampleState(); S.plot=e.plot; S.rooms=e.rooms; S.columns=e.columns; sel=null; autoResults=[]; afterChange(); fit(); };
+$('#bNew').onclick=()=>{ if(!confirm('بدء مخطط جديد؟ ستُحذف الغرف والأعمدة (يمكن التراجع).')) return; pushHist(); S.rooms=[]; S.columns=[]; sel=null; autoResults=[]; afterChange(); };
+$('#bUndo').onclick=undo; $('#bRedo').onclick=redo;
+$('#zIn').onclick=()=>{ const b=cv.getBoundingClientRect(); zoomAt(1.25,b.width/2,b.height/2); };
+$('#zOut').onclick=()=>{ const b=cv.getBoundingClientRect(); zoomAt(0.8,b.width/2,b.height/2); };
+$('#zFit').onclick=fit;
+$('#newType').innerHTML=typeOpts('bedroom');
+window.addEventListener('resize', ()=>render());
+
+fit(); refreshPane(); updateBadge();
+new ResizeObserver(()=>{ if(!fit.done){ fit(); fit.done=true; } else render(); }).observe(cv);
+</script>
+</body>
+</html>
