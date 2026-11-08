@@ -25,6 +25,7 @@ button,input,select{font:inherit;color:inherit}
 .app{display:grid;grid-template-rows:auto 1fr auto;height:100vh;height:100dvh}
 header{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap}
 header h1{font-size:15px;margin:0 4px 0 10px;font-weight:700}
+header select{flex:none;width:auto}
 .tb{display:flex;gap:4px;align-items:center}
 .sep{width:1px;height:26px;background:var(--line);margin:0 4px;flex:none}
 .btn{border:1px solid var(--line);background:var(--field);border-radius:8px;padding:6px 10px;cursor:pointer;line-height:1.2;flex:none}
@@ -82,7 +83,7 @@ footer b{color:var(--ink);direction:ltr;display:inline-block}
 .toast.show{opacity:.95}
 .zoom{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:4px}
 .zoom .btn{width:34px;height:34px;padding:0;font-size:17px}
-.legend{position:absolute;bottom:10px;right:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:11.5px;color:var(--muted);line-height:1.6}
+.legend{position:absolute;bottom:10px;right:10px;max-height:45%;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:11.5px;color:var(--muted);line-height:1.6}
 .legend i{display:inline-block;width:10px;height:10px;vertical-align:middle;margin-inline-end:4px;border-radius:2px}
 .chk{display:flex;gap:6px;align-items:center;margin:5px 0;cursor:pointer}
 .chk input{width:16px;height:16px}
@@ -118,6 +119,8 @@ footer b{color:var(--ink);direction:ltr;display:inline-block}
   <div class="tb">
     <button class="btn on" data-mode="select" title="تحديد وتحريك وتغيير المقاسات (V)">تحديد</button>
     <button class="btn" data-mode="room" title="ارسم غرفة بالسحب (R)">+ غرفة</button>
+    <button class="btn" data-mode="door" title="انقر على جدار لإضافة باب أو نافذة (D)">+ باب / نافذة</button>
+    <select id="opKind" title="نوع الفتحة" style="width:auto"></select>
     <button class="btn" data-mode="column" title="ضع عموداً بالنقر (C)">+ عمود</button>
     <button class="btn" data-mode="pan" title="تحريك اللوحة (H)">تحريك اللوحة</button>
     <select id="newType" title="نوع الغرفة الجديدة" style="width:auto"></select>
@@ -126,6 +129,7 @@ footer b{color:var(--ink);direction:ltr;display:inline-block}
   <div class="tb">
     <button class="btn" id="bUndo" title="تراجع (Ctrl+Z)">↶</button>
     <button class="btn" id="bRedo" title="إعادة (Ctrl+Y)">↷</button>
+    <button class="btn" id="bEng" title="إظهار المحاور وسلاسل الأبعاد والشبكة">عرض هندسي</button>
   </div>
   <div class="sep"></div>
   <div class="tb">
@@ -152,11 +156,7 @@ footer b{color:var(--ink);direction:ltr;display:inline-block}
       <button class="btn" id="zOut" title="تصغير">−</button>
       <button class="btn" id="zFit" title="ملاءمة" style="font-size:13px">⤢</button>
     </div>
-    <div class="legend">
-      <div><i style="background:#2b2f36"></i>عمود (مثبّت)</div>
-      <div><i style="background:none;border:1.5px dashed #c62828"></i>تعارض</div>
-      <div><i style="background:none;border:1.5px dashed #0f6e5c"></i>حدود البناء</div>
-    </div>
+    <div class="legend" id="legend"></div>
     <div class="toast" id="toast"></div>
   </div>
   <aside>
@@ -191,37 +191,44 @@ footer b{color:var(--ink);direction:ltr;display:inline-block}
    Rooms hold NET (clear) dimensions; walls sit in the gaps.
    ========================================================= */
 const TYPES = {
-  bedroom:  {n:'غرفة نوم',            c:'#f6dcb0', minA:9,   minW:2.7},
-  master:   {n:'غرفة نوم رئيسية',     c:'#f2cd94', minA:14,  minW:3.3},
-  majlis:   {n:'مجلس',                c:'#d3e7c6', minA:16,  minW:3.5},
-  dining:   {n:'مقلط',                c:'#e6d6ef', minA:9,   minW:2.4},
-  living:   {n:'صالة',                c:'#d4e6f3', minA:12,  minW:3.0},
-  kitchen:  {n:'مطبخ',                c:'#f6e6a6', minA:7,   minW:2.2, wet:true},
-  bath:     {n:'حمام',                c:'#c2e2ef', minA:2.4, minW:1.2, wet:true},
-  wc:       {n:'دورة مياه',           c:'#c9e7f2', minA:1.5, minW:0.9, wet:true},
-  laundry:  {n:'غسيل / خدمات',        c:'#d8eef0', minA:3,   minW:1.5, wet:true},
-  maid:     {n:'غرفة خادمة',          c:'#efe0cf', minA:6,   minW:2.2},
-  storage:  {n:'مستودع',              c:'#e5e1da', minA:2,   minW:1.2},
-  corridor: {n:'ممر',                 c:'#eeeeec', minA:0,   minW:1.0, long:true},
-  stair:    {n:'درج',                 c:'#dbd4c7', minA:0,   minW:1.2, long:true, fixed:true},
-  elevator: {n:'مصعد',                c:'#d2d2dc', minA:0,   minW:1.2, fixed:true},
-  balcony:  {n:'بلكونة',              c:'#cfa487', minA:0,   minW:1.0, long:true, outdoor:true},
-  roof:     {n:'سطح',                 c:'#e9e9e9', minA:0,   minW:0,   long:true, outdoor:true, fixed:true},
-  parking:  {n:'موقف سيارات',         c:'#dfe3e8', minA:0,   minW:0,   long:true, outdoor:true},
-  yard:     {n:'فناء مكشوف',          c:'#e4efdc', minA:0,   minW:0,   long:true, outdoor:true},
-  void:     {n:'فراغ',                c:'#f3f3f1', minA:0,   minW:0},
+  bedroom:  {n:'غرفة نوم',            c:'#f4dcc8', minA:9,   minW:2.7},
+  master:   {n:'غرفة نوم رئيسية',     c:'#efcfb5', minA:14,  minW:3.3},
+  majlis:   {n:'مجلس',                c:'#dde9cf', minA:16,  minW:3.5},
+  dining:   {n:'مقلط',                c:'#ebe1f1', minA:9,   minW:2.4},
+  living:   {n:'صالة',                c:'#f2e7c9', minA:12,  minW:3.0},
+  kitchen:  {n:'مطبخ',                c:'#f7ebbd', minA:7,   minW:2.2, wet:true},
+  bath:     {n:'حمام',                c:'#cfe5f0', minA:2.4, minW:1.2, wet:true},
+  wc:       {n:'دورة مياه',           c:'#d5e9f2', minA:1.5, minW:0.9, wet:true},
+  laundry:  {n:'غسيل / خدمات',        c:'#d4ecea', minA:3,   minW:1.5, wet:true, long:true},
+  maid:     {n:'غرفة خادمة',          c:'#ede1d3', minA:6,   minW:2.2},
+  storage:  {n:'مستودع',              c:'#e7e3dc', minA:2,   minW:1.2, long:true},
+  corridor: {n:'ممر',                 c:'#f2f1ee', minA:0,   minW:1.0, long:true},
+  stair:    {n:'درج',                 c:'#ded7cb', minA:0,   minW:1.2, long:true, fixed:true},
+  elevator: {n:'مصعد',                c:'#d9d9e2', minA:0,   minW:1.2, fixed:true},
+  balcony:  {n:'بلكونة',              c:'#ead6c3', minA:0,   minW:1.0, long:true, outdoor:true},
+  roof:     {n:'سطح',                 c:'#ececec', minA:0,   minW:0,   long:true, outdoor:true, fixed:true},
+  parking:  {n:'موقف سيارات',         c:'#e4e7eb', minA:0,   minW:0,   long:true, outdoor:true},
+  yard:     {n:'فناء مكشوف',          c:'#e3eed9', minA:0,   minW:0,   long:true, outdoor:true},
+  void:     {n:'فراغ',                c:'#f5f5f3', minA:0,   minW:0, long:true},
   other:    {n:'أخرى',                c:'#ececf4', minA:0,   minW:0}
 };
 const DEF_SETTINGS = {grid:0.05, snapObj:true, snapGrid:true, wall:0.2, colsLocked:true, strictCols:true,
-  noOverlap:false, showDims:true, showChains:true, showAxes:true, showGrid:true, showBg:true, bgOpacity:0.55, showGhost:true};
+  noOverlap:false, showDims:true, showChains:true, showAxes:true, showGrid:false, showBg:true, bgOpacity:0.55, showGhost:true, eng:false};
 
 let uid = 1; const nid = p => p + (uid++).toString(36) + Math.random().toString(36).slice(2,5);
 const R = (x,y,w,h,name,type,locked) => ({id:nid('r'),x,y,w,h,name,type,locked:!!locked});
 const C = (x,y,w,h) => ({id:nid('c'),x,y,w:w||0.2,h:h||0.5});
 
+const OPK = {door:{n:'باب',len:0.9}, double:{n:'باب مزدوج',len:1.6}, slide:{n:'باب منزلق',len:1.8}, open:{n:'فتحة بدون باب',len:1.0}, window:{n:'نافذة',len:1.2}};
+// opening on a wall: centre (x,y) on the wall centre-line; dir 'h' = wall runs along x, 'v' = along y
+// side: +1 swings toward +y ('h') or +x ('v'); hinge: +1 = hinge at the +x / +y end
+const O = (x,y,dir,len,kind='door',side=1,hinge=1)=>({id:nid('o'),x,y,dir,len,kind,side,hinge});
+// removed partition between two rooms (geometry derived from the rooms each time)
+const G = (ra,rb)=>({id:nid('o'),kind:'gone',ra,rb,s:null,e:null});
 const PLOT0 = ()=>({w:14,d:25,sb:{t:2,b:3.35,l:2,r:2},lab:{t:'جار',b:'شارع عرض 15م',l:'جار',r:'جار'}});
-const FL = (name,rooms,columns,useSb)=>({id:nid('f'),name,rooms,columns,bg:null,useSetbacks:!!useSb});
-function groundFloor(){ return FL('الدور الأرضي',[
+const FL = (name,rooms,columns,useSb,openings)=>({id:nid('f'),name,rooms,columns,openings:openings||[],bg:null,useSetbacks:!!useSb});
+const RN = (rooms,name,i=0)=>rooms.filter(r=>r.name===name)[i].id;
+function groundFloor(){ const f=FL('الدور الأرضي',[
   R(0.2,0.2,13.6,1.8,'فناء خلفي','yard',true),
   R(0.2,2.2,1.7,6.0,'مفتوح على قبو','void'),
   R(2.2,2.2,3.6,4.0,'غرفة نوم','bedroom'),
@@ -247,8 +254,21 @@ function groundFloor(){ return FL('الدور الأرضي',[
   R(0.2,19.4,4.6,5.4,'موقف سيارات','parking'),
   R(4.95,19.4,2.4,5.4,'درج نزول للقبو','stair',true),
   R(7.6,19.4,6.2,5.4,'موقف سيارات','parking')
- ],[C(0.27,0.09,0.45,0.2),C(5.74,0.09,0.45,0.2),C(10.05,0.09,0.45,0.2),C(13.73,0.09,0.45,0.2),C(0.4,2.09,0.45,0.2),C(6.14,2.09,0.65,0.2),C(9.65,2.09,0.65,0.2),C(2.1,2.24,0.2,0.45),C(13.88,2.28,0.2,0.65),C(2.1,4.03,0.2,0.45),C(0.11,5.19,0.2,0.65),C(5.88,5.19,0.2,0.65),C(9.9,5.29,0.2,0.65),C(13.88,6.28,0.2,0.65),C(2.1,6.32,0.2,0.45),C(0.11,8.03,0.2,0.65),C(2.1,8.13,0.2,0.45),C(4.45,8.28,0.65,0.2),C(7.35,8.28,0.45,0.2),C(9.65,8.28,0.85,0.2),C(13.88,9.08,0.2,0.65),C(0.11,10.65,0.2,0.65),C(13.59,11.27,0.45,0.2),C(9.3,11.41,0.2,0.45),C(11.9,11.41,0.2,0.45),C(7.49,11.61,0.2,0.85),C(0.11,13.29,0.2,0.65),C(3.3,13.69,0.2,0.55),C(7.49,14.64,0.2,0.85),C(9.3,15.64,0.2,0.45),C(11.9,15.64,0.2,0.45),C(13.88,15.64,0.2,0.45),C(0.11,16.08,0.2,0.35),C(9.3,17.33,0.2,0.45),C(11.9,17.33,0.2,0.45),C(3.3,17.69,0.2,0.55),C(0.11,18.99,0.2,0.35),C(3.3,18.99,0.2,0.55),C(9.3,19.04,0.2,0.45),C(11.9,19.04,0.2,0.45),C(7.64,19.19,0.45,0.2),C(13.59,19.19,0.45,0.2),C(4.9,19.33,0.2,0.45),C(4.9,21.19,0.2,0.65),C(7.49,21.19,0.2,0.65),C(0.11,21.87,0.2,0.35),C(13.88,22.03,0.2,0.35),C(4.9,24.72,0.2,0.45),C(7.49,24.72,0.2,0.45),C(0.11,24.77,0.2,0.35),C(13.88,24.77,0.2,0.35),C(3.3,24.87,0.55,0.2)],true); }
-function firstFloor(){ return FL('الدور الأول',[
+ ],[C(0.27,0.09,0.45,0.2),C(5.74,0.09,0.45,0.2),C(10.05,0.09,0.45,0.2),C(13.73,0.09,0.45,0.2),C(0.4,2.09,0.45,0.2),C(6.14,2.09,0.65,0.2),C(9.65,2.09,0.65,0.2),C(2.1,2.24,0.2,0.45),C(13.88,2.28,0.2,0.65),C(2.1,4.03,0.2,0.45),C(0.11,5.19,0.2,0.65),C(5.88,5.19,0.2,0.65),C(9.9,5.29,0.2,0.65),C(13.88,6.28,0.2,0.65),C(2.1,6.32,0.2,0.45),C(0.11,8.03,0.2,0.65),C(2.1,8.13,0.2,0.45),C(4.45,8.28,0.65,0.2),C(7.35,8.28,0.45,0.2),C(9.65,8.28,0.85,0.2),C(13.88,9.08,0.2,0.65),C(0.11,10.65,0.2,0.65),C(13.59,11.27,0.45,0.2),C(9.3,11.41,0.2,0.45),C(11.9,11.41,0.2,0.45),C(7.49,11.61,0.2,0.85),C(0.11,13.29,0.2,0.65),C(3.3,13.69,0.2,0.55),C(7.49,14.64,0.2,0.85),C(9.3,15.64,0.2,0.45),C(11.9,15.64,0.2,0.45),C(13.88,15.64,0.2,0.45),C(0.11,16.08,0.2,0.35),C(9.3,17.33,0.2,0.45),C(11.9,17.33,0.2,0.45),C(3.3,17.69,0.2,0.55),C(0.11,18.99,0.2,0.35),C(3.3,18.99,0.2,0.55),C(9.3,19.04,0.2,0.45),C(11.9,19.04,0.2,0.45),C(7.64,19.19,0.45,0.2),C(13.59,19.19,0.45,0.2),C(4.9,19.33,0.2,0.45),C(4.9,21.19,0.2,0.65),C(7.49,21.19,0.2,0.65),C(0.11,21.87,0.2,0.35),C(13.88,22.03,0.2,0.35),C(4.9,24.72,0.2,0.45),C(7.49,24.72,0.2,0.45),C(0.11,24.77,0.2,0.35),C(13.88,24.77,0.2,0.35),C(3.3,24.87,0.55,0.2)],true);
+  const r=f.rooms;
+  f.openings=[
+    O(5.3,6.3,'h',0.9,'door',-1,1), O(6.55,6.3,'h',0.9,'door',-1,-1), O(10.6,6.3,'h',0.9,'door',-1,-1),
+    O(4.7,7.3,'v',0.8,'door',-1,-1), O(11.3,7.3,'v',0.8,'door',1,-1),
+    O(5.4,8.3,'h',1.2,'open'), O(8.6,8.3,'h',0.9,'door',1,-1),
+    O(7.5,12.55,'v',0.8,'door',1,-1), O(12.9,11.3,'h',0.8,'door',1,1), O(12.9,14.5,'h',0.8,'door',1,1),
+    O(9.3,16.5,'v',0.9,'open'), O(10.6,17.2,'h',0.9,'slide'),
+    O(8.4,19.25,'h',0.9,'door',-1,1), O(4.0,19.25,'h',1.0,'door',-1,-1), O(4.0,17.55,'h',1.0,'open'), O(4.75,18.4,'v',0.7,'door',1,1),
+    O(1.7,13.4,'h',2.4,'window'), O(4.4,2.1,'h',1.0,'window'), O(7.3,2.1,'h',1.0,'window'), O(11.6,2.1,'h',1.0,'window'),
+    G(RN(r,'صالة'),RN(r,'مقلط'))
+  ];
+  return f; }
+
+function firstFloor(){ const f=FL('الدور الأول',[
   R(0.2,8.4,1.8,4.9,'سطح الدور الأرضي','roof',true),
   R(12.05,2.2,1.75,16.9,'سطح الدور الأرضي','roof',true),
   R(2.2,2.2,3.6,4.0,'غرفة نوم','bedroom'),
@@ -269,8 +289,18 @@ function firstFloor(){ return FL('الدور الأول',[
   R(9.4,17.3,2.4,1.8,'مصعد','elevator',true),
   R(9.4,19.3,2.4,1.8,'بلكونة','balcony',true),
   R(2.2,15.1,7.0,6.0,'مجلس','majlis')
- ],[C(6.14,2.1,0.65,0.2),C(9.65,2.1,0.65,0.2),C(11.74,2.1,0.45,0.2),C(2.1,2.24,0.2,0.45),C(2.1,4.03,0.2,0.45),C(5.88,5.19,0.2,0.65),C(11.9,6.05,0.2,0.65),C(2.1,6.33,0.2,0.45),C(2.1,8.15,0.2,0.45),C(4.45,8.29,0.65,0.2),C(9.5,8.29,0.2,0.65),C(11.9,9.09,0.2,0.65),C(2.1,10.67,0.2,0.65),C(9.3,11.43,0.2,0.45),C(11.9,11.43,0.2,0.45),C(7.51,11.63,0.2,0.85),C(2.1,12.65,0.2,0.65),C(7.51,14.64,0.2,0.85),C(9.3,15.64,0.2,0.45),C(11.9,15.64,0.2,0.45),C(2.1,16.01,0.2,0.65),C(9.3,17.33,0.2,0.45),C(11.9,17.33,0.2,0.45),C(2.1,18.94,0.2,0.65),C(9.3,19.04,0.2,0.45),C(11.9,19.04,0.2,0.45),C(4.88,21.18,0.65,0.2),C(7.51,21.18,0.65,0.2)]); }
-function annexFloor(){ return FL('الملحق العلوي',[
+ ],[C(6.14,2.1,0.65,0.2),C(9.65,2.1,0.65,0.2),C(11.74,2.1,0.45,0.2),C(2.1,2.24,0.2,0.45),C(2.1,4.03,0.2,0.45),C(5.88,5.19,0.2,0.65),C(11.9,6.05,0.2,0.65),C(2.1,6.33,0.2,0.45),C(2.1,8.15,0.2,0.45),C(4.45,8.29,0.65,0.2),C(9.5,8.29,0.2,0.65),C(11.9,9.09,0.2,0.65),C(2.1,10.67,0.2,0.65),C(9.3,11.43,0.2,0.45),C(11.9,11.43,0.2,0.45),C(7.51,11.63,0.2,0.85),C(2.1,12.65,0.2,0.65),C(7.51,14.64,0.2,0.85),C(9.3,15.64,0.2,0.45),C(11.9,15.64,0.2,0.45),C(2.1,16.01,0.2,0.65),C(9.3,17.33,0.2,0.45),C(11.9,17.33,0.2,0.45),C(2.1,18.94,0.2,0.65),C(9.3,19.04,0.2,0.45),C(11.9,19.04,0.2,0.45),C(4.88,21.18,0.65,0.2),C(7.51,21.18,0.65,0.2)]);
+  const r=f.rooms;
+  f.openings=[
+    O(5.3,6.3,'h',0.9,'door',-1,1), O(6.45,6.3,'h',0.9,'door',-1,-1), O(9.95,6.3,'h',0.7,'door',1,-1),
+    O(4.7,7.3,'v',0.8,'door',-1,-1), O(7.5,8.5,'v',0.8,'door',1,1), O(7.5,10.4,'v',0.8,'door',1,1), O(9.5,10.0,'v',0.8,'door',1,1),
+    O(5.9,9.0,'v',0.9,'door',-1,-1), O(5.9,13.5,'v',1.0,'open'), O(7.5,12.45,'v',0.7,'door',1,1),
+    O(6.7,15.0,'h',1.4,'open'), O(9.3,16.4,'v',0.9,'door',-1,-1), O(10.6,17.2,'h',0.9,'slide'), O(9.3,20.2,'v',1.4,'slide'),
+    O(4.2,2.1,'h',1.0,'window'), O(11.9,4.0,'v',1.6,'window'), O(2.1,13.55,'v',1.0,'window'), O(2.1,9.9,'v',0.8,'window'), O(3.6,21.2,'h',1.6,'window'),
+    G(RN(r,'ممر',0),RN(r,'ممر',1))
+  ];
+  return f; }
+function annexFloor(){ const f=FL('الملحق العلوي',[
       R(2,2,10,6.45,'سطح الدور الأول','roof',true),
       R(7.55,8.45,4.45,3.1,'سطح الدور الأول','roof',true),
       R(2.15,8.65,3.6,3.6,'غرفة نوم','bedroom'),
@@ -284,7 +314,16 @@ function annexFloor(){ return FL('الملحق العلوي',[
       R(9.35,16.25,2.4,1.2,'بسطة الدرج','stair',true),
       R(9.35,17.55,2.4,1.8,'مصعد','elevator',true),
       R(2.15,19.55,7.0,1.8,'بلكونة','balcony',true)
- ],[C(2.1,8.6,0.2,0.45),C(4.45,8.29,0.65,0.2),C(7.51,8.46,0.2,0.45),C(2.1,10.67,0.2,0.65),C(2.1,12.65,0.2,0.65),C(2.1,16.01,0.2,0.65),C(2.1,18.94,0.2,0.65),C(7.51,11.63,0.2,0.85),C(7.51,14.64,0.2,0.85),C(9.3,11.43,0.2,0.45),C(11.9,11.43,0.2,0.45),C(9.3,15.64,0.2,0.45),C(11.9,15.64,0.2,0.45),C(9.3,17.33,0.2,0.45),C(11.9,17.33,0.2,0.45),C(9.3,19.04,0.2,0.45),C(11.9,19.04,0.2,0.45)]); }
+ ],[C(2.1,8.6,0.2,0.45),C(4.45,8.29,0.65,0.2),C(7.51,8.46,0.2,0.45),C(2.1,10.67,0.2,0.65),C(2.1,12.65,0.2,0.65),C(2.1,16.01,0.2,0.65),C(2.1,18.94,0.2,0.65),C(7.51,11.63,0.2,0.85),C(7.51,14.64,0.2,0.85),C(9.3,11.43,0.2,0.45),C(11.9,11.43,0.2,0.45),C(9.3,15.64,0.2,0.45),C(11.9,15.64,0.2,0.45),C(9.3,17.33,0.2,0.45),C(11.9,17.33,0.2,0.45),C(9.3,19.04,0.2,0.45),C(11.9,19.04,0.2,0.45)]);
+  const r=f.rooms;
+  f.openings=[
+    O(5.85,9.1,'v',0.9,'door',-1,-1), O(6.65,8.55,'h',0.9,'door',1,1), O(7.45,12.85,'v',0.7,'door',1,1),
+    O(5.85,13.6,'v',1.4,'open'), O(6.65,15.25,'h',1.4,'open'), O(7.45,13.85,'v',0.7,'door',1,1),
+    O(9.25,16.6,'v',0.9,'door',-1,-1), O(10.55,17.45,'h',0.9,'slide'), O(5.65,19.45,'h',2.4,'slide'),
+    O(2.05,9.8,'v',1.0,'window'), O(2.8,8.55,'h',0.9,'window'),
+    G(RN(r,'مجلس'),RN(r,'مقلط'))
+  ];
+  return f; }
 function exampleState(){
   return { plot:PLOT0(), floors:[groundFloor(),firstFloor(),annexFloor()], cur:0, variants:[], settings:{...DEF_SETTINGS}, types:null };
 }
@@ -295,7 +334,8 @@ function bindFloors(st){
     delete st.rooms; delete st.columns; delete st.bg;
   }
   st.cur=Math.min(Math.max(0,st.cur|0),st.floors.length-1);
-  for(const k of ['rooms','columns','bg']) Object.defineProperty(st,k,{get(){ return st.floors[st.cur][k]; }, set(v){ st.floors[st.cur][k]=v; }, enumerable:false, configurable:true});
+  for(const f of st.floors) f.openings=f.openings||[];
+  for(const k of ['rooms','columns','bg','openings']) Object.defineProperty(st,k,{get(){ return st.floors[st.cur][k]; }, set(v){ st.floors[st.cur][k]=v; }, enumerable:false, configurable:true});
   st.variants=st.variants||[];
   return st;
 }
@@ -315,9 +355,9 @@ let preview = null;        // auto-layout preview rooms
 let calibPts = [];
 let autoResults = [];
 
-const snap = () => JSON.stringify({plot:S.plot,cur:S.cur,useSb:floor().useSetbacks,rooms:S.rooms,columns:S.columns});
+const snap = () => JSON.stringify({plot:S.plot,cur:S.cur,useSb:floor().useSetbacks,rooms:S.rooms,columns:S.columns,openings:S.openings});
 function pushHist(){ hist.push(snap()); if(hist.length>120) hist.shift(); fut=[]; }
-function restore(str){ const o=JSON.parse(str); S.plot=o.plot; if(o.cur!==undefined && o.cur<S.floors.length) S.cur=o.cur; if(o.useSb!==undefined) floor().useSetbacks=o.useSb; S.rooms=o.rooms; S.columns=o.columns; syncFloorUI&&syncFloorUI(); }
+function restore(str){ const o=JSON.parse(str); S.plot=o.plot; if(o.cur!==undefined && o.cur<S.floors.length) S.cur=o.cur; if(o.useSb!==undefined) floor().useSetbacks=o.useSb; S.rooms=o.rooms; S.columns=o.columns; if(o.openings) S.openings=o.openings; syncFloorUI&&syncFloorUI(); }
 function undo(){ if(!hist.length) return; fut.push(snap()); restore(hist.pop()); afterChange(); }
 function redo(){ if(!fut.length) return; hist.push(snap()); restore(fut.pop()); afterChange(); }
 
@@ -325,20 +365,24 @@ function save(){
   try{
     const types={}; for(const k in TYPES) types[k]={minA:TYPES[k].minA,minW:TYPES[k].minW};
     S.types=types;
-    localStorage.setItem('fpe-v2', JSON.stringify({...S,floors:S.floors.map(f=>({...f,bg:null}))}));
-    try{ localStorage.setItem('fpe-v2-bg', JSON.stringify(S.floors.map(f=>f.bg))); }catch(e){}
+    localStorage.setItem('fpe-v3', JSON.stringify({...S,floors:S.floors.map(f=>({...f,bg:null}))}));
+    try{ localStorage.setItem('fpe-v3-bg', JSON.stringify(S.floors.map(f=>f.bg))); }catch(e){}
   }catch(e){}
 }
 function load(){
   try{
-    const s = JSON.parse(localStorage.getItem('fpe-v2')||'null');
+    const s = JSON.parse(localStorage.getItem('fpe-v3')||'null');
+    if(!s){ // an earlier multi-floor save: keep its floors, add the example doors where the floor is untouched
+      const o2 = JSON.parse(localStorage.getItem('fpe-v2')||'null');
+      if(o2 && o2.floors){ try{ const bgs=JSON.parse(localStorage.getItem('fpe-v2-bg')||'[]'); o2.floors.forEach((f,i)=>f.bg=bgs[i]||null); }catch(e){} return o2; }
+    }
     if(!s){ // carry over a plan saved by the single-floor version as the upper annex
       const o = JSON.parse(localStorage.getItem('fpe-v1')||'null'); if(!o) return null;
       const e = exampleState(); e.floors[2].rooms=o.rooms||e.floors[2].rooms; e.floors[2].columns=o.columns||e.floors[2].columns;
       try{ e.floors[2].bg=JSON.parse(localStorage.getItem('fpe-v1-bg')||'null'); }catch(x){}
       e.plot=o.plot||e.plot; e.settings={...DEF_SETTINGS,...(o.settings||{})}; e.types=o.types; return e;
     }
-    try{ const bgs=JSON.parse(localStorage.getItem('fpe-v2-bg')||'[]'); s.floors.forEach((f,i)=>f.bg=bgs[i]||null); }catch(e){}
+    try{ const bgs=JSON.parse(localStorage.getItem('fpe-v3-bg')||'[]'); s.floors.forEach((f,i)=>f.bg=bgs[i]||null); }catch(e){}
     return s;
   }catch(e){ return null; }
 }
@@ -356,9 +400,46 @@ const colRect = c => ({x:c.x-c.w/2, y:c.y-c.h/2, w:c.w, h:c.h});
 const grow = (r,d) => ({x:r.x-d,y:r.y-d,w:r.w+2*d,h:r.h+2*d});
 const roomById = id => S.rooms.find(r=>r.id===id);
 const colById = id => S.columns.find(c=>c.id===id);
-function colsInside(r){ return r.type==='roof'?[]:S.columns.filter(c=>inside(c.x,c.y,r,0.02)); }
+function colsInside(r){ return r.type==='roof'?[]:S.columns.filter(c=>!c.free && inside(c.x,c.y,r,0.02)); }
 function esc(s){ return String(s).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
 function typeOf(r){ return TYPES[r.type]||TYPES.other; }
+
+/* Walls between rooms: two rooms share a wall when their facing edges are at most one wall apart */
+function sharedEdge(a,b){
+  const w=S.settings.wall, tol=w+0.06, ov=(p0,p1,q0,q1)=>[Math.max(p0,q0),Math.min(p1,q1)];
+  let g, se;
+  g=b.x-(a.x+a.w); if(g>=-0.02&&g<=tol){ se=ov(a.y,a.y+a.h,b.y,b.y+b.h); if(se[1]-se[0]>0.2) return {dir:'v',c:a.x+a.w+g/2,g:Math.max(g,0),s:se[0],e:se[1]}; }
+  g=a.x-(b.x+b.w); if(g>=-0.02&&g<=tol){ se=ov(a.y,a.y+a.h,b.y,b.y+b.h); if(se[1]-se[0]>0.2) return {dir:'v',c:b.x+b.w+g/2,g:Math.max(g,0),s:se[0],e:se[1]}; }
+  g=b.y-(a.y+a.h); if(g>=-0.02&&g<=tol){ se=ov(a.x,a.x+a.w,b.x,b.x+b.w); if(se[1]-se[0]>0.2) return {dir:'h',c:a.y+a.h+g/2,g:Math.max(g,0),s:se[0],e:se[1]}; }
+  g=a.y-(b.y+b.h); if(g>=-0.02&&g<=tol){ se=ov(a.x,a.x+a.w,b.x,b.x+b.w); if(se[1]-se[0]>0.2) return {dir:'h',c:b.y+b.h+g/2,g:Math.max(g,0),s:se[0],e:se[1]}; }
+  return null;
+}
+function goneGeom(o, rooms){
+  rooms=rooms||S.rooms; const a=rooms.find(r=>r.id===o.ra), b=rooms.find(r=>r.id===o.rb); if(!a||!b) return null;
+  const e=sharedEdge(a,b); if(!e) return null; let st=e.s, en=e.e;
+  if(o.s!=null) st=Math.max(st,o.s); if(o.e!=null) en=Math.min(en,o.e);
+  return en-st>0.05 ? {...e,s:st,e:en,a,b} : null;
+}
+// rooms joined by removed walls form one open space
+function zonesOf(rooms){
+  const par={}; const f=x=>par[x]===x?x:(par[x]=f(par[x]));
+  for(const r of rooms) par[r.id]=r.id;
+  for(const o of S.openings) if(o.kind==='gone' && par[o.ra] && par[o.rb] && goneGeom(o,rooms)) par[f(o.ra)]=f(o.rb);
+  const groups={}; for(const r of rooms){ const k=f(r.id); (groups[k]=groups[k]||[]).push(r); }
+  const of={}; for(const k in groups){ const g=groups[k]; const main=g.filter(r=>!typeOf(r).outdoor).sort((a,b)=>area(b)-area(a))[0]||g[0]; for(const r of g) of[r.id]={members:g,main}; }
+  return of;
+}
+// nearest wall line to a point: the wall centre-line just outside one of the room edges
+function nearestWall(p, maxD){
+  const w=S.settings.wall; let best=null;
+  for(const r of S.rooms){ if(r.type==='roof') continue;
+    const E=[{dir:'h',c:r.y-w/2,s:r.x,e:r.x+r.w,inside:1},{dir:'h',c:r.y+r.h+w/2,s:r.x,e:r.x+r.w,inside:-1},{dir:'v',c:r.x-w/2,s:r.y,e:r.y+r.h,inside:1},{dir:'v',c:r.x+r.w+w/2,s:r.y,e:r.y+r.h,inside:-1}];
+    for(const ed of E){ const along=ed.dir==='h'?p.x:p.y, perp=ed.dir==='h'?p.y:p.x; if(along<ed.s-0.05||along>ed.e+0.05) continue; const d=Math.abs(perp-ed.c); if(d<(maxD||0.8)&&(!best||d<best.d)) best={...ed,d,room:r,along,perp}; }
+  }
+  return best;
+}
+const opRect = o=>{ const t=S.settings.wall+0.02; return o.dir==='h'?{x:o.x-o.len/2,y:o.y-t/2,w:o.len,h:t}:{x:o.x-t/2,y:o.y-o.len/2,w:t,h:o.len}; };
+const opById = id=>S.openings.find(o=>o.id===id);
 
 /* Structural axes: cluster column centers */
 function axes(){
@@ -438,9 +519,15 @@ function zoomAt(f, sx, sy){
 function toWorld(e){ const b=cv.getBoundingClientRect(); return {x:(e.clientX-b.left-view.tx)/view.s, y:(e.clientY-b.top-view.ty)/view.s, sx:e.clientX-b.left, sy:e.clientY-b.top}; }
 
 /* ---------------- rendering ---------------- */
+function legend(){
+  const el=$('#legend'); if(!el) return;
+  const seen=[...new Set(S.rooms.filter(r=>r.type!=='roof').map(r=>r.type))];
+  el.innerHTML=seen.map(t=>`<div><i style="background:${TYPES[t].c};border:1px solid #9aa3b1"></i>${TYPES[t].n}</div>`).join('')+
+   `<div><i style="background:#4d5563"></i>جدار</div><div><i style="background:#1f2329;outline:1px solid #888"></i>عمود</div><div><i style="background:none;border:1.5px dashed #0f6e5c"></i>حدود البناء</div>`+(floorBelow()&&S.settings.showGhost?`<div><i style="background:none;border:1.5px dashed #2563a8"></i>${esc(floorBelow().name)}</div>`:'');
+}
 function render(){
   world.setAttribute('transform',`translate(${view.tx},${view.ty}) scale(${view.s})`);
-  world.innerHTML = drawPlan({rooms: preview||S.rooms, interactive:true});
+  world.innerHTML = drawPlan({rooms: preview||S.rooms, interactive:true}); legend();
   $('#stScale').textContent = '1 م = '+view.s.toFixed(1)+' بكسل';
 }
 function drawPlan(o){
@@ -454,7 +541,7 @@ function drawPlan(o){
   if(o.interactive && S.bg && st.showBg){
     h+=`<image href="${S.bg.src}" x="${S.bg.x}" y="${S.bg.y}" width="${S.bg.iw*S.bg.k}" height="${S.bg.ih*S.bg.k}" opacity="${st.bgOpacity}" preserveAspectRatio="none" style="pointer-events:none"/>`;
   }
-  if(o.interactive && st.showGrid && s>14){
+  if(o.interactive && (st.showGrid||st.eng) && s>14){
     const step = s>60?0.5:1; let g='';
     for(let x=0;x<=P.w+1e-6;x+=step) g+=`M${x} 0V${P.d}`;
     for(let y=0;y<=P.d+1e-6;y+=step) g+=`M0 ${y}H${P.w}`;
@@ -477,7 +564,7 @@ function drawPlan(o){
   }
   // structural axes
   const AX = axes();
-  if(st.showAxes && S.columns.length){
+  if(st.eng && st.showAxes && S.columns.length){
     let d=''; const y0=E.y-0.6, y1=E.y+E.h+0.6, x0=E.x-0.6, x1=E.x+E.w+0.6;
     AX.xs.forEach(x=>d+=`M${x} ${y0}V${y1}`); AX.ys.forEach(y=>d+=`M${x0} ${y}H${x1}`);
     h+=`<path d="${d}" stroke="#7b5ea7" stroke-opacity=".45" stroke-width="1" stroke-dasharray="10 3 2 3" fill="none" ${NS}/>`;
@@ -489,31 +576,57 @@ function drawPlan(o){
       AX.ys.forEach((y,i)=>{ if(y-last<rb*2.1) return; last=y; h+=`<circle cx="${x0-rb}" cy="${y}" r="${rb}" fill="#fff" stroke="#7b5ea7" stroke-width="1" ${NS}/><text x="${x0-rb}" y="${y}" font-size="${rb*1.1}" fill="#7b5ea7" text-anchor="middle" dominant-baseline="central">${i+1}</text>`; });
     }
   }
-  // rooms
-  const bgOn = o.interactive && S.bg && st.showBg;
+  // rooms, walls, openings (drawn like a plan: fills, then wall bands, then door cuts)
+  const bgOn = o.interactive && S.bg && st.showBg, W=st.wall, PAPER='#fdfdfb', WALL='#4d5563';
+  const Z = zonesOf(o.rooms), fillOf = r=>{ const z=Z[r.id]; return (z&&z.members.length>1&&!typeOf(r).outdoor)? typeOf(z.main).c : typeOf(r).c; };
+  const op = bgOn?0.6:1;
   for(const r of o.rooms){
-    const T=typeOf(r), bad=issues[r.id], isSel = o.interactive && sel && sel.k==='room' && sel.id===r.id;
-    const fill = r.type==='roof' ? 'url(#hatch)' : T.c;
-    h+=`<rect data-k="room" data-id="${r.id}" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="${fill}" fill-opacity="${bgOn?0.55:0.9}" stroke="${bad?'#c62828':(isSel?'#0f6e5c':'#3b4250')}" stroke-width="${bad||isSel?2.2:1.1}" ${bad?'stroke-dasharray="6 3"':''} ${NS}/>`;
-    if(r.locked && o.interactive) h+=`<text x="${r.x+r.w-px(6)}" y="${r.y+px(13)}" font-size="${px(11)}" fill="#6b7280" text-anchor="start" style="pointer-events:none">🔒</text>`;
-    // labels
-    const fr = Math.min(fs*1.05, r.h/3.4, r.w/(Math.max(r.name.length,12)*0.56)); if(fr < px(6)) continue;
-    const cx=r.x+r.w/2, cy=r.y+r.h/2, showD = st.showDims || !o.interactive;
-    h+=`<g style="pointer-events:none" text-anchor="middle" fill="#1d2330">`;
-    h+=`<text x="${cx}" y="${cy-(showD?fr*0.75:0)}" font-size="${fr}" font-weight="700" dominant-baseline="middle">${esc(r.name)}</text>`;
-    if(showD){
-      h+=`<text x="${cx}" y="${cy+fr*0.55}" font-size="${fr*0.82}" dominant-baseline="middle" direction="ltr" fill="#333a47">${f2(r.w)} × ${f2(r.h)}</text>`;
-      h+=`<text x="${cx}" y="${cy+fr*1.5}" font-size="${fr*0.78}" dominant-baseline="middle" direction="ltr" fill="#0f6e5c">${f2(area(r))} م‎²</text>`;
-    }
-    h+='</g>';
+    const fill = r.type==='roof' ? 'url(#hatch)' : fillOf(r);
+    h+=`<rect data-k="room" data-id="${r.id}" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="${fill}" fill-opacity="${op}" ${typeOf(r).outdoor?`stroke="#8c95a3" stroke-width="1" stroke-dasharray="5 3" ${NS}`:''}/>`;
+  }
+  if(W>0){ let wb='';
+    for(const r of o.rooms){ const T=typeOf(r); if(T.outdoor) continue; wb+=`<rect x="${r.x-W/2}" y="${r.y-W/2}" width="${r.w+W}" height="${r.h+W}" fill="none" stroke="${WALL}" stroke-width="${W}"/>`; }
+    h+=`<g style="pointer-events:none" stroke-linejoin="miter">${wb}</g>`;
+  }
+  // removed walls: paint the gap with the space colour (columns stay)
+  for(const g of S.openings){ if(g.kind!=='gone') continue; const G2=goneGeom(g,o.rooms); if(!G2) continue;
+    const c=fillOf(G2.a), e=0.012, gw=Math.max(G2.g,0)+W*0+0.0;
+    const R2 = G2.dir==='v' ? {x:G2.c-W/2-e,y:G2.s,w:W+2*e,h:G2.e-G2.s} : {x:G2.s,y:G2.c-W/2-e,w:G2.e-G2.s,h:W+2*e};
+    const isSel = o.interactive && sel && sel.k==='op' && sel.id===g.id;
+    h+=`<rect x="${R2.x}" y="${R2.y}" width="${R2.w}" height="${R2.h}" fill="${c}" fill-opacity="${op}" style="pointer-events:none"/>`;
+    if(o.interactive) h+=`<path d="${G2.dir==='v'?`M${G2.c} ${G2.s}V${G2.e}`:`M${G2.s} ${G2.c}H${G2.e}`}" stroke="${isSel?'#d97706':'#9aa3b1'}" stroke-width="${isSel?2:1}" stroke-dasharray="2 4" ${NS} data-k="op" data-id="${g.id}" style="cursor:pointer"/>`;
+  }
+  for(const g of S.openings) if(g.kind!=='gone') h+=opSvg(g, o.interactive && sel && sel.k==='op' && sel.id===g.id, PAPER);
+  // outlines for selection and conflicts
+  for(const r of o.rooms){
+    const bad=issues[r.id], isSel=o.interactive && sel && sel.k==='room' && sel.id===r.id;
+    if(bad||isSel) h+=`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="none" stroke="${bad?'#c62828':'#0f6e5c'}" stroke-width="2.4" ${bad?'stroke-dasharray="6 3"':''} ${NS} style="pointer-events:none"/>`;
   }
   // columns
   for(const c of S.columns){
     const isSel = o.interactive && sel && sel.k==='col' && sel.id===c.id;
-    h+=`<rect data-k="col" data-id="${c.id}" x="${c.x-c.w/2}" y="${c.y-c.h/2}" width="${c.w}" height="${c.h}" fill="#2b2f36" stroke="${isSel?'#f59e0b':'#000'}" stroke-width="${isSel?3:1}" ${NS}/>`;
+    h+=`<rect data-k="col" data-id="${c.id}" x="${c.x-c.w/2}" y="${c.y-c.h/2}" width="${c.w}" height="${c.h}" fill="#1f2329" stroke="${isSel?'#f59e0b':'#000'}" stroke-width="${isSel?3:0.8}" ${NS}/>`;
+  }
+  // labels: one main label per open space
+  const showD = st.eng || !o.interactive;
+  for(const r of o.rooms){
+    const z=Z[r.id], multi=z&&z.members.length>1&&z.main===r, minor=z&&z.members.length>1&&z.main!==r;
+    const ar = multi ? z.members.filter(m=>!typeOf(m).outdoor).reduce((a,m)=>a+area(m),0) : area(r);
+    const fr = Math.min(fs*(st.eng?1.05:1.2), r.h/3.4, r.w/(Math.max(r.name.length,10)*0.56)); if(fr < px(6)) continue;
+    const cx=r.x+r.w/2, cy=r.y+r.h/2;
+    if(r.locked && o.interactive && st.eng) h+=`<text x="${r.x+r.w-px(6)}" y="${r.y+px(13)}" font-size="${px(10)}" fill="#6b7280" text-anchor="start" style="pointer-events:none">🔒</text>`;
+    h+=`<g style="pointer-events:none" text-anchor="middle" fill="#1d2330">`;
+    if(minor && z.main.name===r.name){ h+='</g>'; continue; }
+    h+=`<text x="${cx}" y="${cy-(minor?0:(showD?fr*0.75:fr*0.35))}" font-size="${minor?fr*0.85:fr}" font-weight="${minor?600:700}" dominant-baseline="middle" ${minor?'fill="#4b5563"':''}>${esc(r.name)}</text>`;
+    if(!minor){
+      if(showD) h+=`<text x="${cx}" y="${cy+fr*0.55}" font-size="${fr*0.8}" dominant-baseline="middle" direction="ltr" fill="#3b4250">${f2(r.w)} × ${f2(r.h)}</text>`;
+      h+=`<text x="${cx}" y="${cy+(showD?fr*1.5:fr*0.75)}" font-size="${fr*0.8}" dominant-baseline="middle" direction="ltr" fill="#0f6e5c" font-weight="600">${f2(ar)} م‎²</text>`;
+      if(multi) h+=`<text x="${cx}" y="${cy+(showD?fr*2.4:fr*1.65)}" font-size="${fr*0.62}" dominant-baseline="middle" fill="#6b7280">مساحة مفتوحة</text>`;
+    }
+    h+='</g>';
   }
   // chain dimensions
-  if(st.showChains) h+=chains(o.rooms, fs, AX);
+  if(st.eng && st.showChains) h+=chains(o.rooms, fs, AX);
   if(!o.interactive) return h;
   // selection: handles, dimension lines, clearances
   if(sel && sel.k==='room'){
@@ -534,6 +647,23 @@ function drawPlan(o){
   for(const p of calibPts) h+=`<circle cx="${p.x}" cy="${p.y}" r="${px(5)}" fill="#e11d48"/>`;
   if(calibPts.length===1 && hover) h+=`<path d="M${calibPts[0].x} ${calibPts[0].y}L${hover.x} ${hover.y}" stroke="#e11d48" stroke-width="1.5" ${NS}/><text x="${(calibPts[0].x+hover.x)/2}" y="${(calibPts[0].y+hover.y)/2-px(6)}" font-size="${fs}" fill="#e11d48" text-anchor="middle" direction="ltr">${f2(Math.hypot(hover.x-calibPts[0].x,hover.y-calibPts[0].y))}</text>`;
   return h;
+}
+function opSvg(o, isSel, paper){
+  const NS='vector-effect="non-scaling-stroke"', w=S.settings.wall, t=w+0.03, L=o.len, sd=o.side||1, hg=o.hinge||1;
+  const rot = o.dir==='h'?0:-90;           // local x runs along the wall, local +y is the swing side (+1)
+  const ink=isSel?'#d97706':'#3a4252', thin=isSel?'#d97706':'#8b94a3';
+  let g=`<rect x="${-L/2}" y="${-t/2}" width="${L}" height="${t}" fill="${o.kind==='window'?'#e8f3fb':paper}"/>`;
+  const jamb=`<path d="M${-L/2} ${-t/2}V${t/2}M${L/2} ${-t/2}V${t/2}" stroke="${ink}" stroke-width="1" ${NS}/>`;
+  const leaf=(hx,len,dirx)=>{ // hinge at (hx, sd*w/2), leaf opened 90°, arc back to the other jamb
+    const y0=sd*w/2, tipY=y0+sd*len, ex=hx+dirx*len, sweep=(sd*(-dirx))>0?1:0;
+    return `<path d="M${hx} ${y0}V${tipY}" stroke="${ink}" stroke-width="2" ${NS}/><path d="M${hx} ${tipY}A${len} ${len} 0 0 ${sweep} ${ex} ${y0}" fill="none" stroke="${thin}" stroke-width="1" stroke-dasharray="3 2" ${NS}/>`; };
+  if(o.kind==='door') g+=jamb+leaf(hg*L/2,L,-hg);
+  else if(o.kind==='double') g+=jamb+leaf(L/2,L/2,-1)+leaf(-L/2,L/2,1);
+  else if(o.kind==='slide') g+=jamb+`<rect x="${-L/2}" y="${-w/4-0.025}" width="${L*0.55}" height="0.05" fill="${ink}"/><rect x="${L/2-L*0.55}" y="${w/4-0.025}" width="${L*0.55}" height="0.05" fill="${ink}"/>`;
+  else if(o.kind==='open') g+=`<path d="M${-L/2} ${-t/2}V${t/2}M${L/2} ${-t/2}V${t/2}" stroke="${ink}" stroke-width="1.4" ${NS}/>`;
+  else if(o.kind==='window') g+=jamb+`<path d="M${-L/2} ${-w/6}H${L/2}M${-L/2} ${w/6}H${L/2}" stroke="${isSel?ink:'#3f86b8'}" stroke-width="1.2" ${NS}/>`;
+  const hit = o.kind==='window'||o.kind==='open'||o.kind==='slide' ? `<rect x="${-L/2}" y="${-t/2-0.15}" width="${L}" height="${t+0.3}" fill="transparent"/>` : `<rect x="${-L/2}" y="${sd>0?-t/2:-t/2-L}" width="${L}" height="${t/2+L+0.1}" fill="transparent"/>`;
+  return `<g data-k="op" data-id="${o.id}" transform="translate(${o.x} ${o.y}) rotate(${rot})" style="cursor:pointer">${g}${hit}</g>`;
 }
 function handlePts(r){ const X=r.x,Y=r.y,W=r.w,H=r.h; return [['nw',X,Y],['n',X+W/2,Y],['ne',X+W,Y],['e',X+W,Y+H/2],['se',X+W,Y+H],['s',X+W/2,Y+H],['sw',X,Y+H],['w',X,Y+H/2]]; }
 
@@ -642,7 +772,7 @@ function snapPoint(x,y,exclude){
 function validRect(r, id){
   const st=S.settings;
   if(r.w<0.3||r.h<0.3) return false;
-  const rm=id&&roomById(id); if(st.strictCols && !(rm&&rm.type==='roof') && S.columns.some(c=>inside(c.x,c.y,r,0.02))) return 'col';
+  const rm=id&&roomById(id); if(st.strictCols && !(rm&&rm.type==='roof') && S.columns.some(c=>!c.free && inside(c.x,c.y,r,0.02))) return 'col';
   if(st.noOverlap && S.rooms.some(o=>o.id!==id && o.type!=='roof' && inter(o,r))) return 'ov';
   return true;
 }
@@ -659,10 +789,20 @@ cv.addEventListener('pointerdown', e=>{
   if(mode==='select'){
     if(k==='h'){ const r=roomById(sel.id); drag={t:'resize',h:tgt.dataset.h,id:r.id,o:{...r},p,orig:snap(),moved:false}; return; }
     if(k==='col'){ sel={k:'col',id:tgt.dataset.id}; const c=colById(sel.id); if(!S.settings.colsLocked) drag={t:'mcol',id:c.id,o:{...c},p,orig:snap(),moved:false}; else drag={t:'pan',sx:p.sx,sy:p.sy,tx:view.tx,ty:view.ty,click:true}; render(); showProps(); return; }
-    if(k==='room'){ const r=roomById(tgt.dataset.id); sel={k:'room',id:r.id}; if(!r.locked) drag={t:'move',id:r.id,o:{...r},p,orig:snap(),moved:false}; else drag={t:'pan',sx:p.sx,sy:p.sy,tx:view.tx,ty:view.ty}; render(); showProps(); return; }
+    if(k==='op'){ const o=opById(tgt.dataset.id); sel={k:'op',id:o.id}; if(o.kind!=='gone') drag={t:'mop',id:o.id,o:{...o},p,orig:snap(),moved:false}; else drag={t:'pan',sx:p.sx,sy:p.sy,tx:view.tx,ty:view.ty}; render(); tab('props'); return; }
+    if(k==='room'){ const r=roomById(tgt.dataset.id); sel={k:'room',id:r.id}; if(!r.locked) drag={t:'move',id:r.id,o:{...r},p,orig:snap(),moved:false,ops:attachedOps(r).map(o=>({o,x:o.x,y:o.y}))}; else drag={t:'pan',sx:p.sx,sy:p.sy,tx:view.tx,ty:view.ty}; render(); showProps(); return; }
     sel=null; drag={t:'pan',sx:p.sx,sy:p.sy,tx:view.tx,ty:view.ty}; render(); showProps(); return;
   }
   if(mode==='room'){ const q=snapPoint(p.x,p.y); drag={t:'draw',a:q}; drawRect={x:q.x,y:q.y,w:0,h:0}; return; }
+  if(mode==='door'){
+    const wl=nearestWall(p, Math.max(0.6, 24/view.s)); if(!wl){ toast('انقر قريباً من جدار.'); return; }
+    const kind=$('#opKind').value, len=Math.min(OPK[kind].len, wl.e-wl.s-0.1);
+    if(len<0.4){ toast('الجدار أقصر من الفتحة.'); return; }
+    const al=Math.min(wl.e-len/2, Math.max(wl.s+len/2, Math.round(wl.along/0.05)*0.05));
+    const inRoom = inside(p.x,p.y,wl.room,0); const side = inRoom ? wl.inside : -wl.inside;
+    pushHist(); const o=O(r2(wl.dir==='h'?al:wl.c), r2(wl.dir==='h'?wl.c:al), wl.dir, r2(len), kind, side, 1);
+    S.openings.push(o); sel={k:'op',id:o.id}; afterChange(); tab('props'); return;
+  }
   if(mode==='column'){
     const q=snapPoint(p.x,p.y); pushHist(); const c=C(q.x,q.y,colDefault.w,colDefault.h); S.columns.push(c); sel={k:'col',id:c.id}; guides=[]; afterChange(); return;
   }
@@ -705,10 +845,21 @@ cv.addEventListener('pointermove', e=>{
   if(drag.t==='pan'){ view.tx=drag.tx+(p.sx-drag.sx); view.ty=drag.ty+(p.sy-drag.sy); render(); return; }
   if(drag.t==='bg'){ S.bg.x=drag.o.x+dx; S.bg.y=drag.o.y+dy; render(); return; }
   if(drag.t==='draw'){ const q=snapPoint(p.x,p.y); drawRect={x:Math.min(drag.a.x,q.x),y:Math.min(drag.a.y,q.y),w:Math.abs(q.x-drag.a.x),h:Math.abs(q.y-drag.a.y)}; render(); return; }
+  if(drag.t==='mop'){
+    if(!drag.moved && Math.hypot(dx,dy)*view.s<3) return;
+    drag.moved=true; const o=opById(drag.id);
+    // slide along the wall; jump to another wall when the pointer goes near one
+    const wl=nearestWall(p, Math.max(0.4,18/view.s));
+    if(wl && (wl.dir!==o.dir || Math.abs(wl.c-(o.dir==='h'?o.y:o.x))>0.05)){ const len=Math.min(o.len,wl.e-wl.s-0.1); if(len>=0.4){ o.dir=wl.dir; o.len=r2(len); if(wl.dir==='h') o.y=r2(wl.c); else o.x=r2(wl.c); } }
+    const w2=nearestWall({x:o.x,y:o.y},0.15)||wl;
+    let al=(o.dir==='h'?p.x:p.y); al=Math.round(al/0.05)*0.05; if(w2) al=Math.min(w2.e-o.len/2, Math.max(w2.s+o.len/2, al));
+    if(o.dir==='h') o.x=r2(al); else o.y=r2(al);
+    render(); showProps(true); return;
+  }
   if(drag.t==='move'){
     if(!drag.moved && Math.hypot(dx,dy)*view.s<3) return;
     drag.moved=true; const r=roomById(drag.id), n=snapMove({...drag.o,x:drag.o.x+dx,y:drag.o.y+dy}, r.id);
-    const v=validRect(n,r.id); if(v===true){ r.x=n.x; r.y=n.y; drag.blocked=false; } else drag.blocked=v;
+    const v=validRect(n,r.id); if(v===true){ r.x=n.x; r.y=n.y; drag.blocked=false; for(const q of drag.ops){ q.o.x=r2(q.x+n.x-drag.o.x); q.o.y=r2(q.y+n.y-drag.o.y); } } else drag.blocked=v;
     render(); showProps(true); return;
   }
   if(drag.t==='resize'){
@@ -737,7 +888,7 @@ function endPtr(e){
     } else render();
     return;
   }
-  if((d.t==='move'||d.t==='resize'||d.t==='mcol') && d.moved){
+  if((d.t==='move'||d.t==='resize'||d.t==='mcol'||d.t==='mop') && d.moved){
     hist.push(d.orig); if(hist.length>120) hist.shift(); fut=[];
     if(d.blocked==='col') toast('تم إيقاف الحركة عند آخر موضع صالح: لا يُسمح بوقوع عمود داخل فراغ الغرفة.');
     if(d.blocked==='ov') toast('تم إيقاف الحركة: التداخل بين الغرف غير مسموح (من الإعدادات).');
@@ -751,10 +902,14 @@ cv.addEventListener('wheel', e=>{ e.preventDefault(); const p=toWorld(e); zoomAt
 cv.addEventListener('dblclick', e=>{ const t=e.target.closest('[data-k="room"]'); if(t){ tab('props'); const i=$('#pName'); if(i){i.focus();i.select();} } });
 const colDefault={w:0.2,h:0.5};
 
+// doors/windows sitting on a room's own walls move with it (not removed walls)
+function attachedOps(r){ const w=S.settings.wall; return S.openings.filter(o=>{ if(o.kind==='gone') return false;
+  if(o.dir==='h') return o.x>=r.x-0.05&&o.x<=r.x+r.w+0.05&&(Math.abs(o.y-(r.y-w/2))<0.06||Math.abs(o.y-(r.y+r.h+w/2))<0.06);
+  return o.y>=r.y-0.05&&o.y<=r.y+r.h+0.05&&(Math.abs(o.x-(r.x-w/2))<0.06||Math.abs(o.x-(r.x+r.w+w/2))<0.06); }); }
 function setMode(m){
   mode=m; calibPts=[]; document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
-  cv.classList.toggle('pan', m==='pan'||m==='bgmove'); cv.classList.toggle('draw', ['room','column','calib','align'].includes(m));
-  const hints={select:'انقر غرفة لتحديدها، اسحبها لتحريكها، واسحب المقابض لتغيير مقاساتها. الأعمدة مثبّتة.',room:'اسحب على اللوحة لرسم غرفة. تلتصق الحواف تلقائياً بالمحاور والأعمدة والجدران.',column:'انقر لوضع عمود. يمكن تعديل مقاسه من الخصائص.',pan:'اسحب لتحريك اللوحة، واستخدم العجلة أو إصبعين للتكبير.',calib:'انقر نقطة البداية ثم نقطة النهاية لطول معروف في الصورة (مثل 14.00 لعرض الأرض).',align:'انقر نقطة معروفة في الصورة (مثل زاوية حد الأرض) ثم أدخل إحداثياتها.',bgmove:'اسحب لتحريك صورة المخطط.'};
+  cv.classList.toggle('pan', m==='pan'||m==='bgmove'); cv.classList.toggle('draw', ['room','column','calib','align','door'].includes(m));
+  const hints={door:'انقر على أي جدار لإضافة '+OPK[$('#opKind').value].n+'. يفتح الباب نحو الجهة التي نقرت فيها، ويمكن قلبه من الخصائص.',select:'انقر غرفة لتحديدها، اسحبها لتحريكها، واسحب المقابض لتغيير مقاساتها. الأعمدة مثبّتة.',room:'اسحب على اللوحة لرسم غرفة. تلتصق الحواف تلقائياً بالمحاور والأعمدة والجدران.',column:'انقر لوضع عمود. يمكن تعديل مقاسه من الخصائص.',pan:'اسحب لتحريك اللوحة، واستخدم العجلة أو إصبعين للتكبير.',calib:'انقر نقطة البداية ثم نقطة النهاية لطول معروف في الصورة (مثل 14.00 لعرض الأرض).',align:'انقر نقطة معروفة في الصورة (مثل زاوية حد الأرض) ثم أدخل إحداثياتها.',bgmove:'اسحب لتحريك صورة المخطط.'};
   $('#stHint').textContent=hints[m]||''; render();
 }
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ if(['calib','align','bgmove'].includes(b.dataset.mode)&&!S.bg){ toast('ارفع صورة المخطط أولاً.'); return; } setMode(b.dataset.mode); });
@@ -769,7 +924,8 @@ document.addEventListener('keydown', e=>{
   if((e.ctrlKey||e.metaKey)&&k==='d'){ e.preventDefault(); dupSel(); return; }
   if(k==='delete'||k==='backspace'){ delSel(); return; }
   if(k==='escape'){ sel=null; preview=null; setMode('select'); showProps(); return; }
-  if(k==='v') setMode('select'); if(k==='r') setMode('room'); if(k==='c') setMode('column'); if(k==='h') setMode('pan');
+  if(k==='v') setMode('select'); if(k==='r') setMode('room'); if(k==='c') setMode('column'); if(k==='d') setMode('door');
+  if(sel&&sel.k==='op'&&(k==='f'||k==='g')){ const o=opById(sel.id); if(o&&o.kind!=='gone'){ pushHist(); if(k==='f') o.side=-(o.side||1); else o.hinge=-(o.hinge||1); afterChange(); } return; } if(k==='h') setMode('pan');
   if(k.startsWith('arrow') && sel && sel.k==='room'){
     const r=roomById(sel.id); if(!r||r.locked) return; e.preventDefault();
     const st=(e.shiftKey?10:1)*S.settings.grid, n={...r};
@@ -782,7 +938,8 @@ document.addEventListener('keydown', e=>{
 /* ---------------- actions ---------------- */
 function delSel(){
   if(!sel) return;
-  if(sel.k==='room'){ const r=roomById(sel.id); if(!r) return; if(r.locked){ toast('الغرفة مقفلة. ألغِ القفل أولاً.'); return; } pushHist(); S.rooms=S.rooms.filter(x=>x.id!==r.id); }
+  if(sel.k==='op'){ pushHist(); S.openings=S.openings.filter(o=>o.id!==sel.id); sel=null; afterChange(); return; }
+  if(sel.k==='room'){ const r=roomById(sel.id); if(!r) return; if(r.locked){ toast('الغرفة مقفلة. ألغِ القفل أولاً.'); return; } pushHist(); S.rooms=S.rooms.filter(x=>x.id!==r.id); S.openings=S.openings.filter(o=>!(o.kind==='gone'&&(o.ra===r.id||o.rb===r.id))); }
   else { if(S.settings.colsLocked){ toast('الأعمدة مثبّتة. ألغِ تثبيتها من الإعدادات لحذف عمود.'); return; } pushHist(); S.columns=S.columns.filter(c=>c.id!==sel.id); }
   sel=null; afterChange();
 }
@@ -848,6 +1005,30 @@ function afterChange(){ save(); render(); refreshPane(); updateBadge(); }
 function num(id,val,step=0.05,min){ return `<input type="number" id="${id}" value="${f2(val)}" step="${step}" ${min!==undefined?`min="${min}"`:''}>`; }
 function typeOpts(cur){ return Object.entries(TYPES).map(([k,t])=>`<option value="${k}" ${k===cur?'selected':''}>${t.n}</option>`).join(''); }
 
+function neighbours(r){ return S.rooms.filter(n=>n.id!==r.id && n.type!=='roof' && sharedEdge(r,n)).map(n=>({n,e:sharedEdge(r,n),g:S.openings.find(o=>o.kind==='gone'&&((o.ra===r.id&&o.rb===n.id)||(o.ra===n.id&&o.rb===r.id)))})); }
+function aligned(r,n){ return (Math.abs(r.y-n.y)<0.03&&Math.abs(r.h-n.h)<0.03)||(Math.abs(r.x-n.x)<0.03&&Math.abs(r.w-n.w)<0.03); }
+function neighoursZone(r){ const z=zonesOf(S.rooms)[r.id]; return z&&z.members.length>1?z:null; }
+function neighboursHtml(r){
+  const L=neighbours(r); const z=neighoursZone(r);
+  if(!L.length) return '';
+  return `<h3>الجدران المشتركة</h3>
+  ${z?`<div class="hint">جزء من مساحة مفتوحة واحدة: ${z.members.map(m=>'«'+esc(m.name)+'»').join(' + ')} = ${f2(z.members.filter(m=>!typeOf(m).outdoor).reduce((a,m)=>a+area(m),0))} م²</div>`:''}
+  <table><tbody>${L.map(({n,e,g})=>`<tr><td>${esc(n.name)}<div class="hint">${f2(e.e-e.s)} م</div></td><td style="white-space:nowrap;text-align:left">${g?`<button class="btn sm" data-wb="${n.id}">إعادة الجدار</button>`:`<button class="btn sm" data-wr="${n.id}">إزالة الجدار</button>`}${aligned(r,n)&&!r.locked&&!n.locked?` <button class="btn sm" data-mg="${n.id}">دمج كغرفة واحدة</button>`:''}</td></tr>`).join('')}</tbody></table>
+  <div class="hint">«إزالة الجدار» تجعل المساحتين فراغاً واحداً مفتوحاً مع بقاء الأعمدة. «دمج كغرفة واحدة» يحوّلهما إلى مستطيل واحد. التراجع متاح دائماً بـ ↶.</div>`;
+}
+function bindNeighbours(r){
+  const p=$('#p-props');
+  p.querySelectorAll('[data-wr]').forEach(b=>b.onclick=()=>{ pushHist(); S.openings.push(G(r.id,b.dataset.wr)); afterChange(); toast('أُزيل الجدار. الأعمدة على خطه باقية.'); });
+  p.querySelectorAll('[data-wb]').forEach(b=>b.onclick=()=>{ pushHist(); const id=b.dataset.wb; S.openings=S.openings.filter(o=>!(o.kind==='gone'&&((o.ra===r.id&&o.rb===id)||(o.ra===id&&o.rb===r.id)))); afterChange(); });
+  p.querySelectorAll('[data-mg]').forEach(b=>b.onclick=()=>{ const n=roomById(b.dataset.mg);
+    const x0=Math.min(r.x,n.x), y0=Math.min(r.y,n.y), x1=Math.max(r.x+r.w,n.x+n.w), y1=Math.max(r.y+r.h,n.y+n.h);
+    const u={x:r2(x0),y:r2(y0),w:r2(x1-x0),h:r2(y1-y0)};
+    const inC=S.columns.filter(c=>inside(c.x,c.y,u,0.02)); inC.forEach(c=>c.free=true);
+    pushHist(); Object.assign(r,u); if(area(n)>area(r)/2 && r.type!==n.type) r.type=area(n)>=area(r)-area(n)?n.type:r.type;
+    S.rooms=S.rooms.filter(x=>x.id!==n.id);
+    S.openings=S.openings.filter(o=>!(o.kind==='gone'&&((o.ra===r.id&&o.rb===n.id)||(o.ra===n.id&&o.rb===r.id)))).map(o=>o.kind==='gone'?{...o,ra:o.ra===n.id?r.id:o.ra,rb:o.rb===n.id?r.id:o.rb}:o);
+    afterChange(); toast(inC.length?`تم الدمج. ${inC.length} عمود أصبح حراً داخل الغرفة (يبقى إنشائياً).`:'تم الدمج في غرفة واحدة.'); });
+}
 function showProps(light){
   const p=$('#p-props');
   if(light && curTab()==='props' && sel && sel.k==='room'){ const r=roomById(sel.id); if(r){ for(const [id,v] of [['pX',r.x],['pY',r.y],['pW',r.w],['pH',r.h]]){ const i=$('#'+id); if(i) i.value=f2(v);} const a=$('#pA'); if(a) a.textContent=f2(area(r))+' م²'; } return; }
@@ -883,6 +1064,34 @@ function showProps(light){
     bind('lbT',v=>S.plot.lab.t=v); bind('lbB',v=>S.plot.lab.b=v); bind('lbR',v=>S.plot.lab.r=v); bind('lbL',v=>S.plot.lab.l=v);
     return;
   }
+  if(sel.k==='op'){
+    const o=opById(sel.id); if(!o){ sel=null; return showProps(); }
+    if(o.kind==='gone'){
+      const G2=goneGeom(o); const a=roomById(o.ra), b=roomById(o.rb);
+      p.innerHTML=`<h3>جدار مُزال</h3><div class="hint">بين «${esc(a?a.name:'?')}» و«${esc(b?b.name:'?')}»${G2?` بطول ${f2(G2.e-G2.s)} م`:''}. الأعمدة الواقعة على خط الجدار تبقى كما هي.</div>
+      <div class="row"><button class="btn sm" id="gFull">إزالة كامل الجدار</button><button class="btn sm dng" id="gBack">إعادة الجدار</button></div>`;
+      $('#gFull').onclick=()=>{ pushHist(); o.s=null; o.e=null; afterChange(); };
+      $('#gBack').onclick=()=>{ pushHist(); S.openings=S.openings.filter(x=>x.id!==o.id); sel=null; afterChange(); };
+      return;
+    }
+    const W2=nearestWall({x:o.x,y:o.y},0.15);
+    p.innerHTML=`<h3>${OPK[o.kind].n}</h3>
+    <div class="grid2">
+      <label class="fld" style="grid-column:1/-1"><span>النوع</span><select id="oKind">${Object.entries(OPK).map(([k,v])=>`<option value="${k}" ${k===o.kind?'selected':''}>${v.n}</option>`).join('')}</select></label>
+      <label class="fld"><span>العرض (م)</span>${num('oLen',o.len,0.05,0.4)}</label>
+      <label class="fld"><span>الموضع على الجدار</span>${num('oPos',o.dir==='h'?o.x:o.y)}</label>
+    </div>
+    ${['door','double'].includes(o.kind)?`<div class="row"><button class="btn sm" id="oSide">قلب جهة الفتح (F)</button>${o.kind==='door'?'<button class="btn sm" id="oHinge">قلب جهة المفصلة (G)</button>':''}</div>`:''}
+    <div class="row"><button class="btn sm dng" id="oDel">حذف</button></div>
+    <div class="hint">اسحب الفتحة لتحريكها على الجدار أو نقلها لجدار آخر.${W2?'':' <b style="color:var(--warn)">هذه الفتحة لا تقع على جدار حالياً.</b>'}</div>`;
+    const set=fn=>{ pushHist(); fn(); afterChange(); };
+    $('#oKind').onchange=e=>set(()=>{ o.kind=e.target.value; });
+    $('#oLen').onchange=e=>{ const v=parseFloat(e.target.value); if(v>=0.4) set(()=>o.len=r2(v)); };
+    $('#oPos').onchange=e=>{ const v=parseFloat(e.target.value); if(!isNaN(v)) set(()=>{ if(o.dir==='h') o.x=r2(v); else o.y=r2(v); }); };
+    if($('#oSide')) $('#oSide').onclick=()=>set(()=>o.side=-(o.side||1));
+    if($('#oHinge')) $('#oHinge').onclick=()=>set(()=>o.hinge=-(o.hinge||1));
+    $('#oDel').onclick=delSel; return;
+  }
   if(sel.k==='col'){
     const c=colById(sel.id); if(!c){ sel=null; return showProps(); }
     const L=S.settings.colsLocked;
@@ -892,7 +1101,9 @@ function showProps(light){
       <label class="fld"><span>المركز س</span>${num('cX',c.x)}</label><label class="fld"><span>المركز ص</span>${num('cY',c.y)}</label>
       <label class="fld"><span>العرض</span>${num('cW',c.w,0.05,0.1)}</label><label class="fld"><span>الطول</span>${num('cH',c.h,0.05,0.1)}</label>
     </div>
+    <label class="chk"><input type="checkbox" id="cFree" ${c.free?'checked':''}> عمود حر: يبقى قائماً داخل فراغ مفتوح بعد إزالة الجدار حوله</label>
     <div class="row"><button class="btn sm dng" id="cDel" ${L?'disabled':''}>حذف العمود</button></div>`;
+    $('#cFree').onchange=e=>{ pushHist(); c.free=e.target.checked; afterChange(); };
     ['cX','cY','cW','cH'].forEach(id=>{ const i=$('#'+id); i.disabled=L; i.onchange=()=>{ pushHist(); c[{cX:'x',cY:'y',cW:'w',cH:'h'}[id]]=r2(parseFloat(i.value)||0); afterChange(); }; });
     $('#cDel').onclick=delSel; return;
   }
@@ -917,6 +1128,7 @@ function showProps(light){
     <button class="btn sm" id="pSplitH">تقسيم عرضي</button>
     <button class="btn sm dng" id="pDel">حذف</button>
   </div>
+  ${neighboursHtml(r)}
   <div class="hint">الحد الأدنى الإرشادي لـ«${T.n}»: مساحة ${f2(T.minA)} م²، أقل بُعد ${f2(T.minW)} م. نسبة الأبعاد: ${f2(Math.max(r.w,r.h)/Math.min(r.w,r.h))}.
   ${ci.length?`<br><b style="color:var(--err)">يوجد ${ci.length} عمود داخل فراغ هذه الغرفة.</b>`:''}</div>`;
   const set=(fn)=>{ pushHist(); fn(); afterChange(); };
@@ -925,6 +1137,7 @@ function showProps(light){
   const numSet=(id,fn)=>{ $('#'+id).disabled=L; $('#'+id).onchange=e=>{ const v=parseFloat(e.target.value); if(isNaN(v)) return; const n={...r}; fn(n,v); n.x=r2(n.x);n.y=r2(n.y);n.w=r2(Math.max(0.3,n.w));n.h=r2(Math.max(0.3,n.h)); const ok=validRect(n,r.id); if(ok==='col') toast('تنبيه: هذا المقاس يضع عموداً داخل الغرفة.'); if(ok==='ov'){ toast('المقاس يسبب تداخلاً.'); showProps(); return; } if(ok==='col' && S.settings.strictCols){ showProps(); return; } set(()=>Object.assign(r,n)); }; };
   numSet('pW',(n,v)=>n.w=v); numSet('pH',(n,v)=>n.h=v); numSet('pX',(n,v)=>n.x=v); numSet('pY',(n,v)=>n.y=v); numSet('pArea',(n,v)=>n.h=v/n.w);
   $('#pLock').onchange=e=>set(()=>r.locked=e.target.checked);
+  bindNeighbours(r);
   $('#pDup').onclick=dupSel; $('#pDel').onclick=delSel; $('#pRot').onclick=rotateSel; $('#pSplitV').onclick=()=>splitSel('v'); $('#pSplitH').onclick=()=>splitSel('h');
   ['pDup','pRot','pSplitV','pSplitH','pDel'].forEach(id=>{ if(L && id!=='pDup') $('#'+id).disabled=true; });
 }
@@ -975,7 +1188,7 @@ function analyze(){
       {n:{...r,y:r2(cr.y+cr.h),h:r2(r.y+r.h-cr.y-cr.h)}, d:'تقليص الجهة العلوية إلى وجه العمود'}
     ].filter(o=>o.n.w>=0.5&&o.n.h>=0.5).sort((a,b)=>area(b.n)-area(a.n));
     const o=opts[0];
-    out.push({lvl:'err',id:r.id,txt:`عمود عند (${f2(c.x)}، ${f2(c.y)}) يقع داخل فراغ ${nm(r)}.`+(o?` الاقتراح: ${o.d} (المساحة تصبح ${f2(area(o.n))} م² بدلاً من ${f2(area(r))}).`:''),fix:o&&!r.locked?()=>Object.assign(roomById(r.id),o.n):null});
+    out.push({lvl:'err',id:r.id,alt:{label:'إبقاؤه عموداً حراً',fn:()=>{ colById(c.id).free=true; }},txt:`عمود عند (${f2(c.x)}، ${f2(c.y)}) يقع داخل فراغ ${nm(r)}.`+(o?` الاقتراح: ${o.d} (المساحة تصبح ${f2(area(o.n))} م² بدلاً من ${f2(area(r))}).`:''),fix:o&&!r.locked?()=>Object.assign(roomById(r.id),o.n):null});
   }
   // 2 overlaps
   for(let i=0;i<rooms.length;i++) for(let j=i+1;j<rooms.length;j++){
@@ -1024,7 +1237,7 @@ function analyze(){
   }
   // 5 edges close to (not on) a column face line → align
   for(const r of rooms){
-    if(r.locked) continue;
+    if(r.locked || typeOf(r).outdoor) continue;
     // only columns that sit along the edge being tested (a wall line through the column)
     const near=S.columns.filter(c=>c.x>r.x-0.6&&c.x<r.x+r.w+0.6&&c.y>r.y-0.6&&c.y<r.y+r.h+0.6);
     const AXs=near.flatMap(c=>[c.x-w/2,c.x+w/2]), AYs=near.flatMap(c=>[c.y-w/2,c.y+w/2]);
@@ -1048,9 +1261,46 @@ function analyze(){
       let g=null,n=null;
       if(ovY>0.5 && o.x>=r.x+r.w){ g=o.x-(r.x+r.w); n={...r,w:r2(o.x-w-r.x)}; }
       else if(ovX>0.5 && o.y>=r.y+r.h){ g=o.y-(r.y+r.h); n={...r,h:r2(o.y-w-r.y)}; }
-      if(g!==null && g>w+0.04 && g<0.7 && !blocked(n,r.id))
+      if(g!==null && g>w+0.12 && g<0.7 && !blocked(n,r.id) && !typeOf(r).outdoor && !typeOf(o).outdoor)
         out.push({lvl:'info',id:r.id,txt:`فراغ ضيق غير مستغل بعرض ${f2(g)} م بين ${nm(r)} و${nm(o)}. الاقتراح: توسعة ${nm(r)} ليبقى جدار ${f2(w)} م فقط (+${f2(area(n)-area(r))} م²).`,fix:()=>Object.assign(roomById(r.id),n)});
     }
+  }
+  // doors and windows
+  const doorTypes=['door','double','slide','open'];
+  for(const o of S.openings){ if(o.kind==='gone') continue; const nmO=OPK[o.kind].n;
+    const wl=nearestWall({x:o.x,y:o.y},0.12);
+    if(!wl || wl.dir!==o.dir){ out.push({lvl:'warn',op:o.id,txt:`${nmO} عند (${f2(o.x)}، ${f2(o.y)}) لا يقع على جدار (ربما بعد تحريك غرفة).`,fixLabel:'حذف',fix:()=>{ S.openings=S.openings.filter(x=>x.id!==o.id); }}); continue; }
+    const orc=opRect(o), hitC=S.columns.find(c=>inter(orc,colRect(c)));
+    if(hitC){ // slide along the wall to clear the column
+      const cr=colRect(hitC), lo=wl.s+o.len/2, hi=wl.e-o.len/2; const cand=o.dir==='h'?[cr.x-o.len/2-0.05, cr.x+cr.w+o.len/2+0.05]:[cr.y-o.len/2-0.05, cr.y+cr.h+o.len/2+0.05];
+      const cur=o.dir==='h'?o.x:o.y; const ok=cand.filter(v=>v>=lo-0.001&&v<=hi+0.001).sort((a,b)=>Math.abs(a-cur)-Math.abs(b-cur));
+      out.push({lvl:'warn',op:o.id,txt:`${nmO} يتقاطع مع عمود عند (${f2(hitC.x)}، ${f2(hitC.y)}).`+(ok.length?` الاقتراح: إزاحته ${f2(Math.abs(ok[0]-cur))} م على نفس الجدار.`:''),fix:ok.length?()=>{ const q=opById(o.id); if(q.dir==='h') q.x=r2(ok[0]); else q.y=r2(ok[0]); }:null});
+    }
+  }
+  const zs=zonesOf(rooms);
+  for(const r of rooms){ const T=typeOf(r); if(T.outdoor||['void','elevator','stair'].includes(r.type)) continue;
+    const z=zs[r.id]; const members=z?z.members.map(m=>m.id):[r.id];
+    const has=S.openings.some(o=>o.kind!=='window'&&o.kind!=='gone'&&members.some(id=>{ const m=roomById(id); return attachedOps(m).includes(o); })) || (z&&z.members.length>1&&S.openings.some(o=>o.kind==='gone'&&members.includes(o.ra)));
+    if(!has && !(z&&z.members.length>1)) out.push({lvl:'info',id:r.id,txt:`لا يوجد باب أو فتحة لـ${nm(r)}. أضفه بأداة «+ باب / نافذة» بالنقر على الجدار.`});
+  }
+  // free-standing columns: in a removed wall or inside a merged room
+  const tight=0.8;
+  for(const g of S.openings){ if(g.kind!=='gone') continue; const G2=goneGeom(g); if(!G2) continue;
+    for(const c of S.columns){ const cr=colRect(c), perp=G2.dir==='v'?c.x:c.y, al0=G2.dir==='v'?cr.y:cr.x, al1=G2.dir==='v'?cr.y+cr.h:cr.x+cr.w;
+      const mid=(al0+al1)/2; if(Math.abs(perp-G2.c)>S.settings.wall/2+0.15 || mid<=G2.s+0.05 || mid>=G2.e-0.05) continue;
+      const pa=al0-G2.s, pb=G2.e-al1, nmc=`(${f2(c.x)}، ${f2(c.y)})`;
+      out.push({lvl:'info',col:c.id,txt:`العمود ${nmc} يبقى قائماً حراً بعد إزالة الجدار بين «${G2.a.name}» و«${G2.b.name}». يُقترح تكسيته (جبس/خشب) أو استغلاله في رف أو قاطع ديكوري.`});
+      for(const [len,side] of [[pa,'s'],[pb,'e']]){
+        if(len>0.05 && len<tight){
+          out.push({lvl:'warn',col:c.id,txt:`المسافة بين العمود ${nmc} ونهاية الجدار ${f2(len)} م فقط، وهي ضيقة للمرور (أقل من ${f2(tight)} م). الاقتراح: إبقاء جزء الجدار الصغير موصولاً بالعمود، وتبقى الفتحة من الجهة الأخرى ${f2(side==='s'?pb:pa)} م.`,
+            fixLabel:'إبقاء الجزء الضيق جداراً', fix:()=>{ const q=S.openings.find(x=>x.id===g.id); if(side==='s') q.s=r2(al0); else q.e=r2(al1); }});
+        }
+      }
+    }
+  }
+  for(const c of S.columns){ if(!c.free) continue; const r=rooms.find(x=>inside(c.x,c.y,x,0.02)); if(!r) continue; const cr=colRect(c);
+    const gaps=[['يمين',cr.x-r.x],['يسار',r.x+r.w-cr.x-cr.w],['أعلى',cr.y-r.y],['أسفل',r.y+r.h-cr.y-cr.h]].filter(([,d])=>d>0.05&&d<tight);
+    out.push({lvl:gaps.length?'warn':'info',col:c.id,txt:`عمود حر داخل ${nm(r)} عند (${f2(c.x)}، ${f2(c.y)}).`+(gaps.length?` المسافة إلى الجدار ${gaps.map(([s2,d])=>s2+' '+f2(d)+' م').join('، ')} ضيقة؛ الاقتراح: سدّ هذه المسافة بجدار قصير أو خزانة مدمجة تتصل بالعمود، وإبقاء المرور من الجهة الأوسع.`:' يُقترح تكسيته أو استغلاله ديكورياً.')});
   }
   // columns of this floor that do not sit on a column of the floor below
   const FB=floorBelow();
@@ -1079,10 +1329,11 @@ function showCheck(){
   const iss=analyze(), p=$('#p-check'), fixable=iss.filter(i=>i.fix);
   const nec=iss.filter(i=>i.fix&&i.lvl!=='info');
   p.innerHTML=`<div class="row"><button class="btn pri sm" id="fixAll" ${nec.length?'':'disabled'}>تطبيق الإصلاحات الضرورية (${nec.length})</button><span class="hint">الأعمدة لا تُعدَّل أبداً، والغرف المقفلة لا تتغير.</span></div>
-  ${iss.length?iss.map((i,k)=>`<div class="iss ${i.lvl}" data-k="${k}"><div>${i.lvl==='err'?'⛔':i.lvl==='warn'?'⚠️':'💡'} ${esc(i.txt)}</div>${i.fix?`<div class="fx"><button class="btn sm" data-fix="${k}">تطبيق</button></div>`:''}</div>`).join(''):'<div class="empty">لا توجد ملاحظات. المخطط متسق مع الأعمدة وحدود البناء.</div>'}
+  ${iss.length?iss.map((i,k)=>`<div class="iss ${i.lvl}" data-k="${k}"><div>${i.lvl==='err'?'⛔':i.lvl==='warn'?'⚠️':'💡'} ${esc(i.txt)}</div>${i.fix||i.alt?`<div class="fx row">${i.fix?`<button class="btn sm" data-fix="${k}">${esc(i.fixLabel||'تطبيق')}</button>`:''}${i.alt?`<button class="btn sm" data-alt="${k}">${esc(i.alt.label)}</button>`:''}</div>`:''}</div>`).join(''):'<div class="empty">لا توجد ملاحظات. المخطط متسق مع الأعمدة وحدود البناء.</div>'}
   <p class="hint">الحدود الدنيا للمساحات قيم إرشادية افتراضية قابلة للتعديل من «الإعدادات»، وليست اشتراطات نظامية؛ يُرجع لاشتراطات البلدية والكود السعودي للبناء.</p>`;
-  p.querySelectorAll('.iss').forEach(d=>d.onclick=e=>{ if(e.target.dataset.fix) return; const i=iss[+d.dataset.k]; if(i.id){ sel={k:'room',id:i.id}; render(); } else if(i.col){ sel={k:'col',id:i.col}; render(); } });
+  p.querySelectorAll('.iss').forEach(d=>d.onclick=e=>{ if(e.target.dataset.fix) return; const i=iss[+d.dataset.k]; if(i.id){ sel={k:'room',id:i.id}; render(); } else if(i.col){ sel={k:'col',id:i.col}; render(); } else if(i.op){ sel={k:'op',id:i.op}; render(); } });
   p.querySelectorAll('[data-fix]').forEach(b=>b.onclick=()=>{ pushHist(); iss[+b.dataset.fix].fix(); afterChange(); });
+  p.querySelectorAll('[data-alt]').forEach(b=>b.onclick=()=>{ pushHist(); iss[+b.dataset.alt].alt.fn(); afterChange(); });
   $('#fixAll').onclick=()=>{ pushHist(); for(let pass=0;pass<12;pass++){ const l=analyze().filter(i=>i.fix && i.lvl!=='info'); if(!l.length) break; l[0].fix(); } afterChange(); toast('تم تطبيق الإصلاحات. الاقتراحات التحسينية (💡) تُطبّق منفردة. التراجع بـ ↶'); };
 }
 
@@ -1264,8 +1515,8 @@ function showSet(){
   <div class="grid2"><label class="fld"><span>خطوة الشبكة (م)</span><select data-n="grid">${[0.01,0.05,0.1,0.25,0.5].map(v=>`<option ${v===st.grid?'selected':''}>${v}</option>`).join('')}</select></label>
   <label class="fld"><span>سماكة الجدار الداخلي (م)</span><input type="number" data-n="wall" value="${st.wall}" step="0.05" min="0"></label></div>
   <h3>العرض</h3>
-  ${ck('showDims','إظهار أبعاد ومساحة كل غرفة')}
-  ${ck('showChains','إظهار سلاسل الأبعاد')}
+  ${ck('eng','العرض الهندسي (محاور، سلاسل أبعاد، شبكة، أبعاد الغرف)')}
+  ${ck('showChains','سلاسل الأبعاد ضمن العرض الهندسي')}
   ${ck('showAxes','إظهار المحاور الإنشائية والمسافات بينها')}
   ${ck('showGrid','إظهار الشبكة')}
   ${ck('showBg','إظهار صورة المخطط')}
@@ -1276,7 +1527,7 @@ function showSet(){
   <table class="typetbl"><thead><tr><th>النوع</th><th>أقل مساحة</th><th>أقل بُعد</th></tr></thead><tbody>
   ${Object.entries(TYPES).filter(([k])=>!['roof','void','other'].includes(k)).map(([k,t])=>`<tr><td>${t.n}</td><td><input type="number" data-t="${k}" data-f="minA" value="${t.minA}" step="0.5" min="0"></td><td><input type="number" data-t="${k}" data-f="minW" value="${t.minW}" step="0.1" min="0"></td></tr>`).join('')}
   </tbody></table>`;
-  p.querySelectorAll('[data-s]').forEach(i=>i.onchange=()=>{ st[i.dataset.s]=i.checked; afterChange(); });
+  p.querySelectorAll('[data-s]').forEach(i=>i.onchange=()=>{ st[i.dataset.s]=i.checked; $('#bEng').classList.toggle('on',!!st.eng); afterChange(); });
   p.querySelectorAll('[data-n]').forEach(i=>i.oninput=()=>{ st[i.dataset.n]=parseFloat(i.value); save(); render(); updateBadge(); });
   p.querySelectorAll('[data-t]').forEach(i=>i.onchange=()=>{ TYPES[i.dataset.t][i.dataset.f]=parseFloat(i.value)||0; save(); updateBadge(); });
   if($('#bgDel')) $('#bgDel').onclick=()=>{ S.bg=null; save(); render(); showSet(); };
@@ -1334,6 +1585,10 @@ $('#zOut').onclick=()=>{ const b=cv.getBoundingClientRect(); zoomAt(0.8,b.width/
 $('#zFit').onclick=fit;
 $('#newType').innerHTML=typeOpts('bedroom');
 syncFloorUI(); $('#floorSel').onchange=e=>switchFloor(+e.target.value);
+$('#opKind').innerHTML=Object.entries(OPK).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');
+$('#opKind').onchange=()=>setMode('door');
+const syncEng=()=>{ $('#bEng').classList.toggle('on',!!S.settings.eng); };
+$('#bEng').onclick=()=>{ S.settings.eng=!S.settings.eng; syncEng(); save(); render(); }; syncEng();
 window.addEventListener('resize', ()=>render());
 
 fit(); refreshPane(); updateBadge();
